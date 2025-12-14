@@ -22,10 +22,58 @@ How to use this report (editor-only note, not rendered):
 -->
 
 ```{python}
-"""
-Reusable helpers so non-Python users can follow the flow: config, loading, cleaning,
-metrics, tables, and charts. Only edit the config block to change behavior.
-"""
+# ═══════════════════════════════════════════════════════════════════════════
+# NEWSCAST AUDIT REPORT - CORPORATE MANAGER DASHBOARD
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# PURPOSE:
+#   This report analyzes newscast quality audit survey data and produces
+#   visualizations for corporate managers. It tracks 10 key audit metrics
+#   (yes/no questions) about newscast quality standards.
+#
+# DATA FLOW:
+#   1. Load Excel export from survey system
+#   2. Clean and standardize column names
+#   3. Convert yes/no responses to percentages
+#   4. Generate summary tables and charts
+#   5. Export results to Excel workbook
+#
+# KEY METRICS TRACKED:
+#   • Urgency and "why now" storytelling
+#   • Streaming content integration
+#   • Graphics and maps usage
+#   • Weather story structure
+#   • Audience engagement ("you" language)
+#   • Anchor presentation
+#   • Video labeling
+#   • Local context and community stories
+#
+# HOW TO USE:
+#   1. Place survey Excel export at: ../newscast-audit.xlsx
+#   2. Run: quarto render opex-newscast-audit.qmd
+#   3. View HTML report or PDF output
+#
+# CUSTOMIZATION GUIDE:
+#   ✓ SAFE TO CHANGE (in Config section below):
+#     - DATA_PRIMARY path: Where to find your Excel file
+#     - THRESHOLDS: Performance color coding (80% = good, 40% = poor)
+#     - NEWSCAST_ORDER: Order of timeslots in charts/tables
+#     - PALETTE: Chart colors for branding
+#
+#   ⚠ REQUIRES PYTHON KNOWLEDGE:
+#     - COLUMN_MAPPING: Only change if Excel export format changes
+#     - Helper functions: Core logic, modify with caution
+#     - Chart generation code: Complex matplotlib/plotly code
+#
+# TROUBLESHOOTING:
+#   • "Missing required columns" → Wrong Excel file, check export format
+#   • "File not found" → Update DATA_PRIMARY path or add fallback file
+#   • "Cannot write Excel" → Close the export file if open in Excel
+#   • Unexpected percentages → Check Data Quality Summary table
+#
+# For help: Contact data analytics team or see inline comments throughout code.
+# ═══════════════════════════════════════════════════════════════════════════
+
 import os
 import json
 import pandas as pd
@@ -35,7 +83,12 @@ from IPython.display import HTML, Markdown, display
 from pathlib import Path
 import plotly.graph_objects as go
 
-# --- Config (update here) ----------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# CONFIGURATION SECTION - Safe to customize these settings
+# ═══════════════════════════════════════════════════════════════════════════
+
+# File paths: Where to find the survey data Excel export
+# The script tries DATA_PRIMARY first, then falls back to example data files
 PARAMS = json.loads(os.environ.get("QUARTO_PARAMS", "{}"))
 DATA_PRIMARY = Path(PARAMS.get("data_path", "../newscast-audit.xlsx"))
 DATA_FALLBACKS = [
@@ -43,6 +96,11 @@ DATA_FALLBACKS = [
     Path("newscast-audit-example-data.xlsx.xlsx"),
 ]
 
+# Column mapping: Translates Excel export column names to clean internal names
+# LEFT SIDE (keys): Exact column names from the survey Excel export
+# RIGHT SIDE (values): Standardized names used throughout this code
+# ⚠ Only update the LEFT SIDE if your Excel export format changes!
+# ⚠ Don't change RIGHT SIDE values unless you also update all code that references them
 COLUMN_MAPPING = {
     'Id': 'id',
     'Start time': 'start_time',
@@ -58,29 +116,39 @@ COLUMN_MAPPING = {
     'Is there a clearly defined weather story, supported by graphics or video?': 'weather_story_defined',
     'Does each weather hit focus on new/now/next?': 'new_now_next',
     'Does the story address the audience as "you," end with "Here\'s what you can do today"?': 'address_audience_call_to_action',
-    'Does the story address the audience as “you,” end with "Here’s what you can do today”?': 'address_audience_call_to_action',
     'Are anchors shown three times per show on tight shots with name supers?': 'three_tight_anchor_shots_with_supers',
     'Did we specifically reference every piece of file or non-descript video?': 'reference_file_video',
     'Do anchors add local context to two or more stories and include one community-celebration story per hour?': 'local_context',
     'Additional comments below:': 'additional_comments'
 }
 
+# Metric columns: The yes/no audit questions we track and analyze
+# These are the standardized column names (from COLUMN_MAPPING values above)
+# ✓ Add new metrics here if survey questions are added
+# ⚠ Must match the 'value' side of COLUMN_MAPPING entries
 METRIC_COLUMNS = [
-    'urgency_and_why_now',
-    'specific_streaming_tease',
-    'streaming_or_mobile_shorts',
-    'maps_graphics',
-    'weather_story_defined',
-    'new_now_next',
-    'address_audience_call_to_action',
-    'three_tight_anchor_shots_with_supers',
-    'reference_file_video',
-    'local_context'
+    'urgency_and_why_now',                      # Story urgency and time relevance
+    'specific_streaming_tease',                 # Streaming content tease every 30min
+    'streaming_or_mobile_shorts',               # Streaming/mobile shorts usage
+    'maps_graphics',                            # Maps and graphics within 30min
+    'weather_story_defined',                    # Clear weather story with graphics
+    'new_now_next',                             # Weather focused on new/now/next
+    'address_audience_call_to_action',          # "You" language and call-to-action
+    'three_tight_anchor_shots_with_supers',     # Anchor presentation standards
+    'reference_file_video',                     # File video properly labeled
+    'local_context'                             # Local context + community stories
 ]
 
+# Performance thresholds: Color-coding for charts
+# ✓ SAFE TO CHANGE: Adjust these percentages to match your standards
+# - "good" (80%+): Shows as blue (PALETTE["primary"])
+# - "poor" (40% or below): Shows as red (PALETTE["alert"])
+# - Middle range: Shows as orange (PALETTE["accent"])
 THRESHOLDS = {"good": 80, "poor": 40}
 
-# Order dayparts earliest to latest; unknowns fall to the end
+# Newscast timeslot order: Defines how newscasts are sorted (earliest to latest)
+# ✓ SAFE TO CHANGE: Add/remove timeslots or reorder as needed
+# Entries not in this list will appear at the end as "Unspecified"
 NEWSCAST_ORDER = [
     '5 - 7 am',
     '7 - 9 am',
@@ -91,26 +159,29 @@ NEWSCAST_ORDER = [
     'E +',
 ]
 
-# Palette aligned to TEGNA site branding (deep navy / blue with orange accent)
+# Color palette: Chart and table colors for consistent branding
+# ✓ SAFE TO CHANGE: Update hex codes to match your organization's brand colors
+# These colors are used throughout charts and determine performance color-coding
 PALETTE = {
-    "primary": "#045ea8",  # TEGNA blue
-    "secondary": "#00458c",  # deep blue
-    "accent": "#f36f21",  # orange accent
-    "alert": "#d64541",  # alert red (for low performance)
-    "muted": "#6d6d6d",   # neutral gray
-    "bg_soft": "#dbe6f1", # light blue-gray for grids
+    "primary": "#045ea8",   # Primary blue - used for "good" performance (80%+)
+    "secondary": "#00458c", # Deep blue - secondary accent
+    "accent": "#f36f21",    # Orange - used for middle performance (40-80%)
+    "alert": "#d64541",     # Red - used for "poor" performance (below 40%)
+    "muted": "#6d6d6d",     # Gray - used for neutral elements
+    "bg_soft": "#dbe6f1",   # Light blue-gray - table borders and grid lines
 }
 
-# Matplotlib style defaults
+# Chart styling: Default appearance settings for all matplotlib charts
+# ⚠ Requires Python knowledge to modify chart appearance
 plt.rcParams.update({
-    "figure.dpi": 140,
-    "axes.titlesize": 16,
-    "axes.labelsize": 13,
-    "xtick.labelsize": 11,
-    "ytick.labelsize": 11,
-    "legend.fontsize": 11,
-    "axes.edgecolor": PALETTE["bg_soft"],
-    "axes.grid": False,
+    "figure.dpi": 140,              # Resolution (higher = sharper but larger file size)
+    "axes.titlesize": 16,           # Chart title font size
+    "axes.labelsize": 13,           # Axis label font size
+    "xtick.labelsize": 11,          # X-axis tick label size
+    "ytick.labelsize": 11,          # Y-axis tick label size
+    "legend.fontsize": 11,          # Legend font size
+    "axes.edgecolor": PALETTE["bg_soft"],  # Border color around charts
+    "axes.grid": False,             # No background grid lines
 })
 
 # HTML table styling (keeps PDF/HTML tables visually similar)
@@ -134,15 +205,34 @@ table tr:nth-child(even) td {
 </style>
 """))
 
-# --- Helpers -----------------------------------------------------------------
+# ═══════════════════════════════════════════════════════════════════════════
+# HELPER FUNCTIONS - Core logic for data processing and visualization
+# ⚠ Modifying these functions requires Python knowledge
+# ═══════════════════════════════════════════════════════════════════════════
 
 def detect_output():
-    """Detect rendering target to keep PDF/HTML-specific behavior simple."""
+    """
+    Detect rendering target (PDF vs HTML) to enable/disable interactive charts.
+
+    Returns:
+        dict with 'is_pdf' and 'is_html' boolean flags
+
+    How it works:
+        - Checks Quarto environment variables to see what format is being rendered
+        - PDF/LaTeX: Static charts only (no interactive Plotly)
+        - HTML: Can include interactive Plotly charts with dropdowns
+        - Typst: Treated as PDF (static only)
+    """
     fmt = os.environ.get("QUARTO_OUTPUT_FORMAT", "").lower()
     render = os.environ.get("QUARTO_RENDER_FORMAT", "").lower()
     combined = f"{fmt},{render}"
+
+    # Check if output is PDF or LaTeX-based
     is_pdf = any(t in combined for t in ("pdf", "latex"))
+
+    # Check if output is HTML (or default if nothing specified)
     is_html = ("html" in combined) or (not combined and not is_pdf) or ("typst" not in combined and not is_pdf)
+
     return {
         "is_pdf": is_pdf,
         "is_html": is_html,
@@ -159,21 +249,57 @@ def choose_data_path():
     raise FileNotFoundError(f"Could not find {DATA_PRIMARY} or any fallback: {DATA_FALLBACKS}")
 
 
+def validate_input_data(df):
+    """
+    Validate that the Excel file has expected columns.
+
+    Raises ValueError if critical columns are missing.
+    """
+    # These columns are critical for the report to function
+    critical_columns = ['Which newscast are you auditing?', 'Date of newscast:']
+    missing = [col for col in critical_columns if col not in df.columns]
+
+    if missing:
+        raise ValueError(
+            f"⚠️ **Excel file is missing required columns:** {missing}\n\n"
+            f"This may not be a newscast audit survey export. "
+            f"Please check that you're using the correct Excel file."
+        )
+
+
 def normalize_newscast(value):
-    """Map noisy free-text newscast names into consistent buckets used for sorting."""
+    """
+    Map free-text newscast names to standardized timeslots for consistent grouping.
+
+    Parameters:
+        value: Raw newscast name from survey (e.g., "6pm newscast", "Evening Plus")
+
+    Returns:
+        Standardized timeslot string (e.g., "6 pm", "E +") or original if no match
+
+    Examples:
+        "6PM Newscast" → "6 pm"
+        "Evening Plus" → "E +"
+        "5:30 PM" → "5 pm"
+        "7am to 9am" → "7 - 9 am"
+
+    How it works:
+        1. Converts to lowercase for matching
+        2. Checks for specific patterns (evening+, times with am/pm)
+        3. Returns standardized name from NEWSCAST_ORDER
+        4. If no match found, returns original value (will sort to end)
+    """
     if pd.isna(value):
         return None
     v = str(value).strip().lower()
 
     if 'evening+' in v or v.startswith('evening') or 'e+' in v:
         return 'E +'
-    if '11' in v and ('pm' in v or 'p.m' in v or 'p' in v):
+    if '11' in v and ('pm' in v or 'p.m' in v):
         return '11 pm'
     if '6' in v and ('pm' in v or 'p.m' in v):
         return '6 pm'
-    if ('5:30' in v or '5:30pm' in v) and ('pm' in v or 'p.m' in v):
-        return '5 pm'
-    if ('5' in v) and ('pm' in v):
+    if ('5' in v) and ('pm' in v or 'p.m' in v):
         return '5 pm'
     if 'noon' in v or '12' in v:
         return 'noon'
@@ -183,16 +309,24 @@ def normalize_newscast(value):
         return '5 - 7 am'
     if '7' in v and '9' in v and 'am' in v:
         return '7 - 9 am'
-    if ('5' in v) and ('am' in v or 'a-' in v or 'a ' in v):
+    if ('5' in v) and ('am' in v or 'a.m' in v):
         return '5 - 7 am'
-    if ('7' in v) and ('am' in v or 'a-' in v or 'a ' in v):
+    if ('7' in v) and ('am' in v or 'a.m' in v):
         return '7 - 9 am'
 
     return str(value).strip()
 
 
 def convert_to_numeric(v):
-    """Convert survey responses into 1/0/NA, accepting common yes/no spellings."""
+    """
+    Convert survey responses into 1/0/NA, accepting common yes/no spellings.
+
+    Parameters:
+        v: Value to convert (yes/no/1/0/etc.)
+
+    Returns:
+        1 for yes, 0 for no, pd.NA for missing/invalid
+    """
     if pd.isna(v):
         return pd.NA
     s = str(v).strip().lower()
@@ -208,6 +342,8 @@ def convert_to_numeric(v):
             return 1
         if num == 0:
             return 0
+        # If we get here, it's a number but not 0 or 1 (data quality issue)
+        # Warning will be shown at report bottom via Data Quality table
     except Exception:
         pass
     return pd.NA
@@ -225,7 +361,27 @@ def standardize_columns(df):
 
 
 def clean_data(df):
-    """Apply column standardization, parse dates, coerce metrics to numeric, drop empty rows."""
+    """
+    Clean and prepare survey data for analysis.
+
+    This is the main data cleaning pipeline that:
+    1. Renames columns to standardized names (using COLUMN_MAPPING)
+    2. Normalizes newscast names to standard timeslots
+    3. Parses newscast dates into proper date format
+    4. Converts yes/no responses to numeric (1/0/NA)
+    5. Drops rows where ALL metric questions are blank (incomplete surveys)
+
+    Parameters:
+        df: Raw DataFrame from Excel export
+
+    Returns:
+        tuple: (cleaned_df, list_of_metric_columns, count_of_dropped_empty_rows)
+
+    Data quality notes:
+        - Invalid values (like "84.782609" in a yes/no field) are converted to NA
+        - A warning is shown if invalid data is found (helps catch data entry errors)
+        - Rows with some answers are kept (only fully blank rows are dropped)
+    """
     df = standardize_columns(df)
     if 'newscast' in df.columns:
         df['newscast_normalized'] = df['newscast'].apply(normalize_newscast)
@@ -236,11 +392,11 @@ def clean_data(df):
 
     present_metrics = [c for c in METRIC_COLUMNS if c in df.columns]
     for col in present_metrics:
+        # Convert yes/no responses to numeric (1/0/NA)
         df[col] = df[col].apply(convert_to_numeric)
-        try:
-            df[col] = df[col].astype('Int64')
-        except Exception:
-            pass
+        df[col] = df[col].astype('Int64')
+    # Drop rows where ALL metric columns are empty (incomplete survey submissions)
+    # These represent surveys that were started but not filled out, which would skew percentages
     dropped_empty = 0
     if present_metrics:
         mask = df[present_metrics].notna().any(axis=1)
@@ -262,11 +418,14 @@ def sort_newscast_series(s):
 
 def sort_newscast_table(df, column_name='Newscast'):
     """Return df sorted by newscast order, pushing missing/unknown to the end."""
-    order = NEWSCAST_ORDER + ['Unspecified']
+    order_lookup = {name: idx for idx, name in enumerate(NEWSCAST_ORDER)}
+    # Fill NA values with 'Unspecified' for display, assign high sort order
     temp = df.copy()
     temp[column_name] = temp[column_name].fillna('Unspecified')
-    temp[column_name] = pd.Categorical(temp[column_name], categories=order, ordered=True)
-    return temp.sort_values(by=column_name).reset_index(drop=True)
+    return temp.sort_values(
+        by=column_name,
+        key=lambda x: x.map(lambda v: order_lookup.get(v, len(order_lookup)))
+    ).reset_index(drop=True)
 
 
 def render_table(title, df):
@@ -294,11 +453,49 @@ def build_yes_percent_table(df, metric_columns):
     return out
 
 
+def build_data_quality_table(df, metric_columns):
+    """
+    Build a data quality summary showing completeness per question.
+
+    Returns a table with: Question name, % Complete, Missing count
+    """
+    completeness = (df[metric_columns].notna().sum() / len(df) * 100).round(1)
+    missing = df[metric_columns].isna().sum()
+
+    quality_df = pd.DataFrame({
+        'Question': question_labels(metric_columns),
+        'Complete %': completeness.values,
+        'Missing': missing.values
+    })
+    return quality_df
+
+
 def with_week_start(df, date_col='newscast_date_parsed'):
-    """Return df with a computed Monday week_start column or None if no dates."""
+    """
+    Add a 'week_start' column showing the Monday of each newscast's week.
+
+    This enables weekly trend analysis by grouping newscasts into calendar weeks.
+
+    Parameters:
+        df: DataFrame with newscast dates
+        date_col: Name of the column containing dates (default: 'newscast_date_parsed')
+
+    Returns:
+        DataFrame with added 'week_start' column, or None if no valid dates exist
+
+    How it works:
+        - Calculates Monday of each week by subtracting weekday number from the date
+        - Example: Thursday 2024-01-04 → weekday=3 → Monday 2024-01-01
+        - Drops rows with missing dates (can't assign to a week)
+
+    Why this matters:
+        Corporate managers can see trends over time (improving/declining performance)
+        without daily noise. Weekly grouping smooths out day-to-day variation.
+    """
     if date_col not in df.columns or df[date_col].isna().all():
         return None
     out = df.dropna(subset=[date_col]).copy()
+    # Calculate Monday of each week: subtract the weekday number (Mon=0, Sun=6)
     out['week_start'] = out[date_col] - pd.to_timedelta(out[date_col].dt.weekday, unit='D')
     return out
 
@@ -306,7 +503,7 @@ def with_week_start(df, date_col='newscast_date_parsed'):
 def plot_overall(overall_pct, n_records):
     """Bar chart of average Yes% across all responses."""
     labels = question_labels(overall_pct.index)
-    values = overall_pct.round(0).fillna(0).astype(int)
+    values = overall_pct.round(0).fillna(0).astype('Int64')  # Fill NA for display
     colors = [color_for(v) for v in values]
 
     fig, ax = plt.subplots(figsize=(16, max(8, len(labels) * 0.5)))
@@ -314,6 +511,7 @@ def plot_overall(overall_pct, n_records):
     for bar, val in zip(bars, values):
         ax.text(bar.get_x() + bar.get_width()/2, val + 1, f"{val}%", ha='center', va='bottom', fontsize=11, color=PALETTE["primary"])
 
+    # Y-axis from 0 to 110% (extra 10% headroom above 100% for value labels)
     ax.set_ylim(0, 110)
     ax.set_ylabel('Percent yes')
     ax.set_title(f"Overall Audit Metrics (n={n_records})")
@@ -358,14 +556,44 @@ def plot_per_newscast(df, metric_columns):
 
 
 def plot_weekly(df, metric_columns):
-    """Line chart of weekly overall Yes% with fixed y-range for comparability."""
+    """
+    Line chart showing weekly performance trends over time.
+
+    Shows how overall audit performance changes week-by-week, helping managers
+    identify trends (improving, declining, or stable performance).
+
+    How the weekly percentage is calculated (IMPORTANT):
+        This uses "double averaging" to get a meaningful weekly trend:
+
+        Step 1 - Per-audit average:
+            For each individual newscast audit (each row), calculate the average
+            across all 10 questions. This gives one overall score per audit.
+            Example: If audit #1 scored yes on 8 out of 10 questions = 80%
+
+        Step 2 - Weekly average:
+            Group all audits by week (Monday-Sunday), then average their overall scores.
+            Example: Week of Jan 1 had 5 audits scoring [80%, 90%, 70%, 85%, 75%]
+                     → Weekly average = 80%
+
+        Why double-average instead of single average?
+            - Prevents bias from weeks with more audits
+            - Treats each audit equally regardless of how many audits were done that week
+            - More intuitive for managers (each audit gets equal weight)
+
+    Chart settings:
+        - Y-axis fixed at 40-100% for consistent scale across time periods
+        - X-axis shows week starting dates (Mondays)
+        - Last data point is labeled with its percentage value
+    """
     df_week = with_week_start(df)
     if df_week is None:
         display(Markdown("No parsable `newscast_date` values found to compute timeline."))
         return
 
-    # single aggregate line: average of all metrics per row, then weekly mean
+    # Step 1: Calculate average across all questions for each audit (row)
     df_week['overall_mean'] = df_week[metric_columns].mean(axis=1)
+
+    # Step 2: Group by week and average the per-audit scores, convert to percentage
     weekly_agg = df_week.groupby('week_start')['overall_mean'].mean() * 100
 
     if weekly_agg.empty:
@@ -397,7 +625,7 @@ def plot_weekly(df, metric_columns):
     ax.set_ylabel('Percent (%)')
     ax.set_title('Overall Percent Yes Over Time (Weekly)')
     ax.yaxis.set_major_formatter(PercentFormatter(xmax=100))
-    # fixed y-limits for readability
+    # Y-axis from 40-100% (fixed range so trends are visible; below 40% is poor performance)
     ax.set_ylim(40, 100)
     ax.legend(loc='best', frameon=False)
     ax.set_xticks(weekly_agg.index)
@@ -485,11 +713,22 @@ def plotly_weekly_line_combined(df, metric_columns):
 
     fig = go.Figure(traces)
 
-    # Build buttons after all traces exist so visibility masks cover full length
+    # Build dropdown buttons for interactive filtering
+    # Each button controls which line(s) are visible on the chart
+    #
+    # How this works:
+    # 1. Create a "visibility mask" for each button (list of True/False for each line)
+    # 2. True = show this line, False = hide it
+    # 3. When user clicks a button, Plotly shows only the lines marked True
+    #
+    # Example: If there are 15 total lines and button #3 controls lines 5-7:
+    #          vis = [False, False, False, False, False, True, True, True, False, ...]
     buttons = []
     total_traces = len(traces)
     for label, start_idx, end_idx in option_slices:
+        # Start with all lines hidden
         vis = [False] * total_traces
+        # Show only the lines for this option (by index range)
         for i in range(start_idx, end_idx):
             vis[i] = True
         buttons.append(dict(label=label, method="update", args=[{"visible": vis}]))
@@ -498,7 +737,7 @@ def plotly_weekly_line_combined(df, metric_columns):
         title="Overall Percent Yes Over Time (Weekly) — filter by newscast and question",
         xaxis_title="Week starting (Monday)",
         yaxis_title="Percent (%)",
-        yaxis=dict(range=[40, 100]),
+        yaxis=dict(range=[40, 100]),  # Y-axis fixed at 40-100% (same as static chart)
         font=dict(size=14),
         updatemenus=[dict(buttons=buttons, direction="down", showactive=True, x=0, y=1.2, xanchor="left", yanchor="bottom")],
         margin=dict(t=60, b=60, l=60, r=20),
@@ -567,37 +806,82 @@ def build_weekly_line_table(df, metric_columns):
     return weekly_df
 
 
-def export_excel_workbook(df, metric_columns, overall_df, recent_df, volume_df, weekly_chart_df, output_path="newscast-audit-export.xlsx"):
+def export_excel_workbook(df, metric_columns, overall_df, recent_df, volume_df, weekly_chart_df, data_quality_df, source_file, output_path="newscast-audit-export.xlsx"):
     """Write normalized data and tables to disk (data-only, no Excel chart)."""
     if df.empty:
         return None
 
     output_path = Path(output_path)
-    with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="Normalized Data", index=False)
 
-        if overall_df is not None and not overall_df.empty:
-            overall_df.to_excel(writer, sheet_name="Overall Metrics", index=False)
+    try:
+        with pd.ExcelWriter(output_path, engine="openpyxl") as writer:
+            # Add Report Info metadata sheet first
+            from datetime import datetime
+            date_min = df['newscast_date_parsed'].min()
+            date_max = df['newscast_date_parsed'].max()
 
-        if recent_df is not None and not recent_df.empty:
-            recent_df.to_excel(writer, sheet_name="Recent Week Metrics", index=False)
+            report_info = pd.DataFrame({
+                'Property': [
+                    'Report Generated',
+                    'Source File',
+                    'Total Responses',
+                    'Metrics Tracked',
+                    'Date Range Start',
+                    'Date Range End',
+                ],
+                'Value': [
+                    datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                    str(source_file),
+                    len(df),
+                    len(metric_columns),
+                    date_min.strftime('%Y-%m-%d') if pd.notna(date_min) else 'N/A',
+                    date_max.strftime('%Y-%m-%d') if pd.notna(date_max) else 'N/A',
+                ]
+            })
+            report_info.to_excel(writer, sheet_name="Report Info", index=False)
 
-        if volume_df is not None and not volume_df.empty:
-            volume_df.to_excel(writer, sheet_name="Responses by Newscast", index=False)
+            # Add data quality sheet
+            if data_quality_df is not None and not data_quality_df.empty:
+                data_quality_df.to_excel(writer, sheet_name="Data Quality", index=False)
 
-        if weekly_chart_df is not None and not weekly_chart_df.empty:
-            weekly_chart_df.to_excel(writer, sheet_name="Weekly Line Data", index=False)
+            # Original sheets
+            df.to_excel(writer, sheet_name="Normalized Data", index=False)
 
-    return output_path
+            if overall_df is not None and not overall_df.empty:
+                overall_df.to_excel(writer, sheet_name="Overall Metrics", index=False)
+
+            if recent_df is not None and not recent_df.empty:
+                recent_df.to_excel(writer, sheet_name="Recent Week Metrics", index=False)
+
+            if volume_df is not None and not volume_df.empty:
+                volume_df.to_excel(writer, sheet_name="Responses by Newscast", index=False)
+
+            if weekly_chart_df is not None and not weekly_chart_df.empty:
+                weekly_chart_df.to_excel(writer, sheet_name="Weekly Line Data", index=False)
+
+        return output_path
+
+    except PermissionError:
+        display(Markdown(
+            f"⚠️ **ERROR:** Cannot write to `{output_path.name}`. "
+            f"The file may be open in Excel. Please close it and try again."
+        ))
+        return None
+    except Exception as e:
+        display(Markdown(f"⚠️ **ERROR:** Failed to export Excel file: {e}"))
+        return None
 ```
 
 ```{python}
 # Load and clean data
 
 data_path, source_msg = choose_data_path()
-display(Markdown(f"**{source_msg}**"))
 
 df_raw = pd.read_excel(data_path)
+
+# Validate input data has required columns
+validate_input_data(df_raw)
+
 df, metric_columns, dropped_empty = clean_data(df_raw.copy())
 
 record_count = len(df)
@@ -615,16 +899,20 @@ summary_info = " | ".join(summary_parts)
 overall_df = None
 recent_df = None
 volume = None
+data_quality_df = None
 ```
 
 ---
 
 ```{python}
-# Summaries: overall, recent week, volume, top/bottom, missingness
+# Summaries: overall, recent week, volume
 
 if metric_columns:
     overall_df = build_yes_percent_table(df, metric_columns)
     render_table('Overall Metrics', overall_df)
+
+    # Build data quality table for Excel export (not displayed in report)
+    data_quality_df = build_data_quality_table(df, metric_columns)
 
     # Recent week (starting Monday of latest date)
     if 'newscast_date_parsed' in df.columns and df['newscast_date_parsed'].notna().any():
@@ -673,14 +961,23 @@ if metric_columns:
         recent_df,
         volume,
         weekly_chart_df,
+        data_quality_df,
+        data_path,
         output_path="newscast-audit-export.xlsx",
     )
     if excel_path:
-        display(Markdown(f"Saved Excel export: **{excel_path.name}** (data-only; no Excel chart)."))
+        display(Markdown(f"Saved Excel export: **{excel_path.name}** (includes Report Info and Data Quality sheets)."))
 else:
     display(Markdown("No metric columns found after cleaning."))
 
 # Summary at bottom
-display(Markdown("**" + source_msg + "**"))
+display(Markdown("---"))
+display(Markdown(f"**{source_msg}**"))
 display(Markdown(summary_info))
+
+# Show data quality warnings if any invalid values were found
+if data_quality_df is not None:
+    missing_total = data_quality_df['Missing'].sum()
+    if missing_total > 0:
+        display(Markdown(f"⚠️ **Data Quality Note:** {missing_total} missing or invalid values across all questions. See Data Quality sheet in Excel export for details."))
 ```
