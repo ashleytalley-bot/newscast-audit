@@ -1,15 +1,12 @@
 ---
-title: "Newscast Audit Report"
+title: "Newscast Audit Report (Interactive)"
 format:
-    typst:
-        include-in-header: typst/table-styles.typ
-    html:
-        page-layout: full
-        theme: litera
+  html:
+    page-layout: full
+    theme: litera
 params:
   data_path: ../newscast-audit.xlsx
-jupyter:
-    kernel: newscast-audit-venv
+jupyter: python3
 execute:
   echo: false
   message: false
@@ -26,8 +23,9 @@ execute:
 
 # HOW TO USE:
 #   1. Place survey Excel export at: ../newscast-audit.xlsx
-#   2. Run: quarto render opex-newscast-audit.qmd
-#   3. View HTML report or PDF output
+#   2. Run: quarto render opex-newscast-audit-interactive.qmd
+#      or: ./render.sh (builds both HTML interactive + Typst/PDF)
+#   3. View HTML report output
 #
 # CUSTOMIZATION GUIDE:
 #   ✓ SAFE TO CHANGE (in Config section below):
@@ -39,7 +37,7 @@ execute:
 #   ⚠ REQUIRES PYTHON KNOWLEDGE:
 #     - COLUMN_MAPPING: Only change if Excel export format changes
 #     - Helper functions: Core logic, modify with caution
-#     - Chart generation code: Complex matplotlib code
+#     - Chart generation code: Complex matplotlib/plotly code
 #
 # TROUBLESHOOTING:
 #   • "Missing required columns" → Wrong Excel file, check export format
@@ -54,8 +52,9 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.ticker import PercentFormatter
-from IPython.display import Markdown, display
+from IPython.display import HTML, Markdown, display
 from pathlib import Path
+import plotly.graph_objects as go
 
 ```
 
@@ -321,12 +320,7 @@ def clean_data(df):
     else:
         df['newscast_normalized'] = None
 
-    if 'newscast_date' in df.columns:
-        parsed = pd.to_datetime(df.get('newscast_date'), errors='coerce')
-        # Normalize to midnight so the column represents a date (no time)
-        df['newscast_date_parsed'] = parsed.dt.normalize()
-    else:
-        df['newscast_date_parsed'] = pd.NaT
+    df['newscast_date_parsed'] = pd.to_datetime(df.get('newscast_date'), errors='coerce') if 'newscast_date' in df.columns else pd.NaT
 
     present_metrics = [c for c in METRIC_COLUMNS if c in df.columns]
     for col in present_metrics:
@@ -432,21 +426,6 @@ def with_week_start(df, date_col='newscast_date_parsed'):
     # Calculate Monday of each week: subtract the weekday number (Mon=0, Sun=6)
     out['week_start'] = out[date_col] - pd.to_timedelta(out[date_col].dt.weekday, unit='D')
     return out
-
-
-def show_table(df, caption=None):
-    """Display a pandas DataFrame as a Pandoc/Markdown pipe table.
-
-    Parameters:
-        df: pandas DataFrame
-        caption: optional caption string to display above the table
-    """
-    if df is None or (hasattr(df, 'empty') and df.empty):
-        return
-    if caption:
-        display(Markdown(caption))
-    # Use pipe format (Pandoc-friendly)
-    display(Markdown(df.to_markdown(index=False, tablefmt='pipe')))
 
 
 def plot_overall(overall_pct, n_records):
@@ -776,7 +755,7 @@ data_quality_df = None
 
 overall_df = build_yes_percent_table(df, metric_columns)
 display(Markdown("### Overall Metrics"))
-show_table(overall_df)
+display(Markdown(overall_df.to_markdown(index=False, tablefmt="github")))
 
 # Build data quality table for Excel export (not displayed in report)
 data_quality_df = build_data_quality_table(df, metric_columns)
@@ -789,7 +768,7 @@ if 'newscast_date_parsed' in df.columns and df['newscast_date_parsed'].notna().a
     if not recent.empty:
         recent_df = build_yes_percent_table(recent, metric_columns)
         display(Markdown(f"### Current Week Metrics (Starting {week_start.strftime('%B %d, %Y')}, n={len(recent)})"))
-        show_table(recent_df)
+        display(Markdown(recent_df.to_markdown(index=False, tablefmt="github")))
     else:
         display(Markdown("No recent-week data found."))
 else:
@@ -800,10 +779,78 @@ if 'newscast_normalized' in df.columns:
     volume = df['newscast_normalized'].value_counts(dropna=False).rename_axis('Newscast').reset_index(name='Responses')
     volume = sort_newscast_table(volume, 'Newscast')
     display(Markdown("### Responses by Newscast"))
-    show_table(volume)
+    display(Markdown(volume.to_markdown(index=False, tablefmt="github")))
 ```
 
 ---
+
+```{python}
+#| label: chart-plotly-interactive
+
+# Interactive Plotly chart with dropdown filters (HTML only)
+
+if 'newscast_normalized' in df.columns:
+        # Build list of filter options (overall, by newscast, by question)
+        newscast_options = sort_newscast_series(df['newscast_normalized'].dropna()).unique().tolist()
+
+        filter_options = [("All newscasts | All questions", None, None)]
+
+        for nc in newscast_options:
+            filter_options.append((f"Newscast: {nc}", nc, None))
+
+        for q in metric_columns:
+            filter_options.append((f"Question: {q.replace('_',' ').title()}", None, q))
+
+        # Create traces (one per filter option)
+        traces = []
+        for label, newscast, question in filter_options:
+            series = weekly_percent_series(df, metric_columns, newscast=newscast, question=question)
+            if series:
+                traces.append(go.Scatter(
+                    x=series["dates"],
+                    y=series["pct"],
+                    mode="lines+markers",
+                    marker=dict(size=9, color=PALETTE["primary"]),
+                    line=dict(width=2, color=PALETTE["primary"]),
+                    name="Weekly percent",
+                    visible=(len(traces) == 0),  # Only first trace visible initially
+                ))
+
+        if traces:
+            fig = go.Figure(traces)
+
+            # Create dropdown buttons (one per trace)
+            buttons = [
+                dict(
+                    label=label,
+                    method="update",
+                    args=[{"visible": [i == idx for i in range(len(traces))]}]
+                )
+                for idx, (label, _, _) in enumerate(filter_options) if idx < len(traces)
+            ]
+
+            fig.update_layout(
+                title="Overall Percent Yes Over Time (Weekly) — filter by newscast and question",
+                xaxis_title="Week starting (Monday)",
+                yaxis_title="Percent (%)",
+                yaxis=dict(range=[40, 100]),
+                font=dict(size=14),
+                updatemenus=[dict(
+                    buttons=buttons,
+                    direction="down",
+                    showactive=True,
+                    x=0, y=1.2,
+                    xanchor="left",
+                    yanchor="bottom"
+                )],
+                margin=dict(t=60, b=60, l=60, r=20),
+                legend=dict(orientation="h", y=-0.2),
+                height=600,
+            )
+
+            fig.show()
+```
+
 
 ```{python}
 #| label: charts-static
@@ -835,4 +882,17 @@ excel_path = export_excel_workbook(
     data_path,
     output_path="newscast-audit-export.xlsx",
 )
+if excel_path:
+    display(Markdown(f"Saved Excel export: **{excel_path.name}** (includes Report Info and Data Quality sheets)."))
+
+# Summary at bottom
+display(Markdown("---"))
+display(Markdown(f"**{source_msg}**"))
+display(Markdown(summary_info))
+
+# Show data quality warnings if any invalid values were found
+if data_quality_df is not None:
+    missing_total = data_quality_df['Missing'].sum()
+    if missing_total > 0:
+        display(Markdown(f"⚠️ **Data Quality Note:** {missing_total} missing or invalid values across all questions. See Data Quality sheet in Excel export for details."))
 ```
