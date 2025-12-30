@@ -8,35 +8,63 @@ import json
 import numpy as np
 
 
-def make_json_serializable(obj):
-    """Convert pandas/numpy types to JSON-serializable Python types."""
-    if isinstance(obj, dict):
-        return {k: make_json_serializable(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [make_json_serializable(v) for v in obj]
-    elif obj is None:
-        return None
-    elif isinstance(obj, (pd.NAType, type(pd.NA))):
-        return None
-    elif isinstance(obj, float) and np.isnan(obj):
-        return None
-    elif isinstance(obj, (np.integer, np.int64)):
-        return int(obj)
-    elif isinstance(obj, (np.floating, np.float64)):
-        if np.isnan(obj):
+class SafeJSONEncoder(json.JSONEncoder):
+    """JSON encoder that handles pandas/numpy types."""
+    def default(self, obj):
+        # Handle pandas NA
+        if obj is pd.NA:
             return None
-        return float(obj)
-    elif isinstance(obj, np.ndarray):
-        return [make_json_serializable(v) for v in obj.tolist()]
-    elif isinstance(obj, pd.Timestamp):
-        return obj.isoformat()
-    else:
+        # Handle numpy types
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            if np.isnan(obj):
+                return None
+            return float(obj)
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        # Handle pandas Timestamp
+        if isinstance(obj, pd.Timestamp):
+            return obj.isoformat()
+        # Handle NaT
+        if isinstance(obj, type(pd.NaT)):
+            return None
+        # Try pd.isna for anything else
         try:
             if pd.isna(obj):
                 return None
-        except (TypeError, ValueError):
+        except:
             pass
-        return obj
+        return super().default(obj)
+
+
+def safe_json_dumps(obj):
+    """Serialize object to JSON, converting NA/NaN to null."""
+    # First pass: convert DataFrame dicts which may have NA values
+    def clean(o):
+        if isinstance(o, dict):
+            return {k: clean(v) for k, v in o.items()}
+        if isinstance(o, list):
+            return [clean(v) for v in o]
+        if o is pd.NA or (isinstance(o, float) and np.isnan(o)):
+            return None
+        if isinstance(o, np.integer):
+            return int(o)
+        if isinstance(o, np.floating):
+            return None if np.isnan(o) else float(o)
+        if isinstance(o, pd.Timestamp):
+            return o.isoformat() if pd.notna(o) else None
+        if isinstance(o, np.ndarray):
+            return [clean(v) for v in o.tolist()]
+        try:
+            if pd.isna(o):
+                return None
+        except:
+            pass
+        return o
+
+    cleaned = clean(obj)
+    return json.dumps(cleaned)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CONFIGURATION SECTION - Safe to customize these settings
@@ -457,4 +485,4 @@ def process_json_data(json_str):
         }
     }
 
-    return json.dumps(make_json_serializable(result))
+    return safe_json_dumps(result)
