@@ -7,3 +7,7 @@
 *.js
 *.woff
 
+# Allow web app files in docs/
+!docs/
+!docs/**
+
