@@ -38,9 +38,6 @@ function setupEventListeners() {
     document.getElementById('btn-export-excel').addEventListener('click', exportExcel);
     document.getElementById('btn-export-pptx').addEventListener('click', exportPowerPoint);
     document.getElementById('btn-new-file').addEventListener('click', resetToUpload);
-
-    // Weekly filter
-    document.getElementById('weekly-filter').addEventListener('change', updateWeeklyChart);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -198,11 +195,7 @@ function renderResults() {
 
     // Charts
     renderOverallChart();
-    renderWeeklyChart();
     renderPerNewscastCharts();
-
-    // Populate weekly filter
-    populateWeeklyFilter();
 }
 
 function renderTable(containerId, data, columns) {
@@ -284,83 +277,6 @@ function renderOverallChart() {
     };
 
     Plotly.newPlot('chart-overall', [trace], layout, { responsive: true });
-}
-
-function renderWeeklyChart(filterIndex = 0) {
-    const filterOptions = processedData.charts.filter_options;
-    if (!filterOptions || filterOptions.length === 0) {
-        document.getElementById('chart-weekly').innerHTML = '<p>No weekly data available</p>';
-        return;
-    }
-
-    const data = filterOptions[filterIndex];
-    const palette = processedData.config.palette;
-
-    const trace = {
-        x: data.dates,
-        y: data.values,
-        type: 'scatter',
-        mode: 'lines+markers',
-        line: {
-            color: palette.primary,
-            width: 2
-        },
-        marker: {
-            color: palette.primary,
-            size: 9
-        },
-        name: 'Weekly percent'
-    };
-
-    // Add annotation for last point
-    const annotations = [];
-    if (data.values.length > 0) {
-        const lastIdx = data.values.length - 1;
-        annotations.push({
-            x: data.dates[lastIdx],
-            y: data.values[lastIdx],
-            text: data.values[lastIdx].toFixed(0) + '%',
-            showarrow: false,
-            yshift: 15,
-            font: { color: palette.primary }
-        });
-    }
-
-    const layout = {
-        title: 'Overall Percent Yes Over Time (Weekly)',
-        xaxis: {
-            title: 'Week Starting (Monday)',
-            tickangle: -45
-        },
-        yaxis: {
-            title: 'Percent (%)',
-            range: [40, 100],
-            ticksuffix: '%'
-        },
-        annotations: annotations,
-        margin: { b: 80, t: 60 },
-        font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }
-    };
-
-    Plotly.newPlot('chart-weekly', [trace], layout, { responsive: true });
-}
-
-function populateWeeklyFilter() {
-    const select = document.getElementById('weekly-filter');
-    const filterOptions = processedData.charts.filter_options;
-
-    select.innerHTML = '';
-    filterOptions.forEach((option, index) => {
-        const opt = document.createElement('option');
-        opt.value = index;
-        opt.textContent = option.label;
-        select.appendChild(opt);
-    });
-}
-
-function updateWeeklyChart() {
-    const select = document.getElementById('weekly-filter');
-    renderWeeklyChart(parseInt(select.value));
 }
 
 function renderPerNewscastCharts() {
@@ -454,16 +370,6 @@ function exportExcel() {
         XLSX.utils.book_append_sheet(wb, wsVolume, 'Responses by Newscast');
     }
 
-    // Weekly data sheet
-    if (exportData.weekly && exportData.weekly.dates && exportData.weekly.dates.length > 0) {
-        const weeklyData = exportData.weekly.dates.map((date, i) => ({
-            'Week Starting': date,
-            'Percent Yes': exportData.weekly.values[i]
-        }));
-        const wsWeekly = XLSX.utils.json_to_sheet(weeklyData);
-        XLSX.utils.book_append_sheet(wb, wsWeekly, 'Weekly Trend');
-    }
-
     // Normalized Data sheet
     if (exportData.normalized && exportData.normalized.length > 0) {
         const wsNormalized = XLSX.utils.json_to_sheet(exportData.normalized);
@@ -521,20 +427,6 @@ async function exportPowerPoint() {
         });
         slide.addImage({
             data: overallImg,
-            x: 0.25, y: 1, w: 9.5, h: 5.5
-        });
-    }
-
-    // Weekly Trend Chart
-    const weeklyImg = await captureChartAsImage('chart-weekly');
-    if (weeklyImg) {
-        slide = pptx.addSlide();
-        slide.addText('Weekly Trend', {
-            x: 0.5, y: 0.3, w: 9, h: 0.5,
-            fontSize: 24, bold: true, color: '000000'
-        });
-        slide.addImage({
-            data: weeklyImg,
             x: 0.25, y: 1, w: 9.5, h: 5.5
         });
     }
