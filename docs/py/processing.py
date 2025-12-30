@@ -115,7 +115,7 @@ THRESHOLDS = {"good": 80, "poor": 40}
 NEWSCAST_ORDER = [
     '5 - 7 am',
     '7 - 9 am',
-    'noon',
+    '12 pm',
     '5 pm',
     '6 pm',
     '11 pm',
@@ -165,7 +165,7 @@ def normalize_newscast(value):
     if '5' in v and ('pm' in v or 'p' in v) and '6' not in v and '7' not in v:
         return '5 pm'
     if 'noon' in v or ('12' in v and ('pm' not in v or 'noon' in v)):
-        return 'noon'
+        return '12 pm'
 
     # Morning shows - check for range patterns first
     # Match: "5-7am", "5a-7a", "5 - 7 am", "5am-7am", "5a - 7a", etc.
