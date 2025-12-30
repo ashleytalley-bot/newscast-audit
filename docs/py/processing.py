@@ -5,6 +5,27 @@
 
 import pandas as pd
 import json
+import numpy as np
+
+
+def make_json_serializable(obj):
+    """Convert pandas/numpy types to JSON-serializable Python types."""
+    if isinstance(obj, dict):
+        return {k: make_json_serializable(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [make_json_serializable(v) for v in obj]
+    elif pd.isna(obj):
+        return None
+    elif isinstance(obj, (np.integer, np.int64)):
+        return int(obj)
+    elif isinstance(obj, (np.floating, np.float64)):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return [make_json_serializable(v) for v in obj.tolist()]
+    elif isinstance(obj, pd.Timestamp):
+        return obj.isoformat()
+    else:
+        return obj
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CONFIGURATION SECTION - Safe to customize these settings
@@ -425,4 +446,4 @@ def process_json_data(json_str):
         }
     }
 
-    return json.dumps(result)
+    return json.dumps(make_json_serializable(result))
