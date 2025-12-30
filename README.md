@@ -2,6 +2,42 @@
 
 These instructions make it easy for a new contributor to set up the project, register a Jupyter kernel tied to the project's virtual environment, and render the Quarto report.
 
+## Web App (GitHub Pages)
+
+A web-based version is available that allows you to upload Excel files and generate reports directly in the browser:
+
+**Live Site:** https://[your-username].github.io/newscast-audit/
+
+### Features
+- Drag-and-drop Excel file upload
+- All charts from the Quarto report (overall, per-newscast, weekly trends)
+- Data quality tables
+- Download Excel export
+- Download PowerPoint slides
+
+### GitHub Pages Setup
+
+1. Go to your repository on GitHub
+2. Navigate to **Settings** > **Pages**
+3. Under "Source", select **Deploy from a branch**
+4. Select the `main` branch and `/docs` folder
+5. Click Save
+6. Your site will be available at `https://[your-username].github.io/newscast-audit/`
+
+### Local Testing
+
+To test the web app locally:
+
+```bash
+cd docs
+python3 -m http.server 8000
+# Open http://localhost:8000 in your browser
+```
+
+---
+
+## Quarto Report
+
 1) Create virtual environment, install dependencies, and register kernel (recommended):
 
 ```bash
