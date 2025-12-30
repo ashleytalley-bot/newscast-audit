@@ -180,6 +180,10 @@ def normalize_newscast(value):
     if '7' in v and ('am' in v or 'a.m' in v or v.endswith('a')):
         return '7 - 9 am'
 
+    # Catch-all for generic "am" without specific time - skip these
+    if v == 'am' or v == 'a.m.' or v == 'a.m':
+        return None
+
     return str(value).strip()
 
 
