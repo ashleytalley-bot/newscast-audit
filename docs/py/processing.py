@@ -5,7 +5,6 @@
 
 import pandas as pd
 import json
-from io import BytesIO
 
 # ═══════════════════════════════════════════════════════════════════════════
 # CONFIGURATION SECTION - Safe to customize these settings
@@ -259,18 +258,19 @@ def weekly_percent_series(df, metric_columns, newscast=None, question=None):
 # MAIN PROCESSING FUNCTION - Called from JavaScript
 # ═══════════════════════════════════════════════════════════════════════════
 
-def process_excel_bytes(excel_bytes):
+def process_json_data(json_str):
     """
-    Main entry point: Process Excel file bytes and return all chart/table data as JSON.
+    Main entry point: Process JSON data (parsed from Excel by SheetJS) and return all chart/table data.
 
     Parameters:
-        excel_bytes: bytes object containing the Excel file
+        json_str: JSON string containing array of row objects from Excel
 
     Returns:
         JSON string with all processed data for charts and tables
     """
-    # Read Excel from bytes
-    df_raw = pd.read_excel(BytesIO(excel_bytes))
+    # Parse JSON to DataFrame
+    data = json.loads(json_str)
+    df_raw = pd.DataFrame(data)
 
     # Validate
     validate_input_data(df_raw)

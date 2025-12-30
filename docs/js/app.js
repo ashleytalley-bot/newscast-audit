@@ -81,14 +81,27 @@ async function processFile(file) {
     }
 
     hideError();
-    showLoading('Initializing Python environment...');
+    showLoading('Reading Excel file...');
 
     try {
+        // Parse Excel with SheetJS (in JavaScript, not Python)
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+        if (!jsonData || jsonData.length === 0) {
+            showError('Excel file appears to be empty');
+            return;
+        }
+
+        showLoading('Initializing Python environment...');
+
         // Initialize Pyodide if needed
         if (!pyodide) {
             pyodide = await loadPyodide();
             showLoading('Loading data processing libraries...');
-            await pyodide.loadPackage(['pandas', 'openpyxl']);
+            await pyodide.loadPackage(['pandas']);
 
             // Load processing script
             showLoading('Loading processing script...');
@@ -97,19 +110,15 @@ async function processFile(file) {
             await pyodide.runPythonAsync(pythonCode);
         }
 
-        showLoading('Processing Excel file...');
+        showLoading('Processing data...');
 
-        // Read file as array buffer
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
+        // Pass JSON data to Python (not Excel bytes)
+        pyodide.globals.set('json_data', JSON.stringify(jsonData));
 
-        // Pass to Python
-        pyodide.globals.set('excel_bytes', uint8Array);
-
-        // Process the file
+        // Process the data
         const resultJson = await pyodide.runPythonAsync(`
 import json
-result = process_excel_bytes(bytes(excel_bytes))
+result = process_json_data(json_data)
 result
         `);
 
@@ -122,9 +131,10 @@ result
     } catch (error) {
         hideLoading();
         console.error('Processing error:', error);
-        showError(`Error processing file: ${error.message || error}`);
+        showError('Error processing file: ' + (error.message || error));
     }
 }
+
 
 // ═══════════════════════════════════════════════════════════════════════════
 // UI HELPERS
