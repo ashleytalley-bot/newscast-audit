@@ -150,24 +150,34 @@ def normalize_newscast(value):
         return None
     v = str(value).strip().lower()
 
+    # Remove common separators and normalize for matching
+    v_normalized = v.replace('-', ' ').replace(':', ' ').replace('.', ' ')
+
+    # Evening+
     if 'evening+' in v or v.startswith('evening') or 'e+' in v:
         return 'E +'
-    if '11' in v and ('pm' in v or 'p.m' in v):
+
+    # PM shows
+    if '11' in v and ('pm' in v or 'p' in v):
         return '11 pm'
-    if '6' in v and ('pm' in v or 'p.m' in v):
+    if '6' in v and ('pm' in v or 'p' in v) and '5' not in v:
         return '6 pm'
-    if ('5' in v) and ('pm' in v or 'p.m' in v):
+    if '5' in v and ('pm' in v or 'p' in v) and '6' not in v and '7' not in v:
         return '5 pm'
-    if 'noon' in v or '12' in v:
+    if 'noon' in v or ('12' in v and ('pm' not in v or 'noon' in v)):
         return 'noon'
 
-    if '5' in v and '7' in v and 'am' in v:
+    # Morning shows - check for range patterns first
+    # Match: "5-7am", "5a-7a", "5 - 7 am", "5am-7am", "5a - 7a", etc.
+    if ('5' in v and '7' in v) and ('a' in v):
         return '5 - 7 am'
-    if '7' in v and '9' in v and 'am' in v:
+    if ('7' in v and '9' in v) and ('a' in v):
         return '7 - 9 am'
-    if ('5' in v) and ('am' in v or 'a.m' in v):
+
+    # Single time mentions with am
+    if '5' in v and ('am' in v or 'a.m' in v or v.endswith('a')):
         return '5 - 7 am'
-    if ('7' in v) and ('am' in v or 'a.m' in v):
+    if '7' in v and ('am' in v or 'a.m' in v or v.endswith('a')):
         return '7 - 9 am'
 
     return str(value).strip()
