@@ -28,8 +28,11 @@ from .utils import (
     question_labels,
     sort_newscast_series,
     color_for,
+    color_for,
     with_week_start
 )
+
+from .quality import DataQualityTracker
 
 from .exceptions import (
     NewscastAuditError,
@@ -62,6 +65,8 @@ __all__ = [
     'sort_newscast_series',
     'color_for',
     'with_week_start',
+    # Quality
+    'DataQualityTracker',
     # Exceptions
     'NewscastAuditError',
     'DataValidationError',

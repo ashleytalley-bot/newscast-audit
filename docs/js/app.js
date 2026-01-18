@@ -215,9 +215,10 @@ class NewscastAuditApp {
                 initialize_config(station_yaml, survey_yaml, norm_yaml)
             `);
 
-            // Import the processing function (now that config is ready)
+            // Import the processing pipeline
             await this.pyodide.runPythonAsync(`
-                from py.processing import process_json_data
+                from py.pipeline.orchestrator import ProcessingPipeline
+                pipeline = ProcessingPipeline()
             `);
         }
     }
@@ -276,7 +277,7 @@ class NewscastAuditApp {
         this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
 
         const resultJson = await this.pyodide.runPythonAsync(`
-            result = process_json_data(json_data)
+            result = pipeline.execute(json_data)
             result
         `);
 

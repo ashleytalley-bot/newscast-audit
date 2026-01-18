@@ -5,7 +5,16 @@
   "lib/config.py",
   "lib/config_dynamic.py",
   "lib/exceptions.py",
+  "lib/quality.py",
   "lib/utils.py",
-  "py/processing.py",
+  "py/pipeline/__init__.py",
+  "py/pipeline/base.py",
+  "py/pipeline/orchestrator.py",
+  "py/pipeline/steps/__init__.py",
+  "py/pipeline/steps/aggregate.py",
+  "py/pipeline/steps/charts.py",
+  "py/pipeline/steps/clean.py",
+  "py/pipeline/steps/export.py",
+  "py/pipeline/steps/validate.py",
   "py/processing_legacy.py"
 ]

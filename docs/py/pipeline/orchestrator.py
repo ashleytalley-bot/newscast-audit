@@ -14,17 +14,13 @@ import json
 import pandas as pd
 from typing import Dict, Any
 
-# Add docs to path for imports
-docs_path = Path(__file__).parent.parent.parent / 'docs'
-sys.path.insert(0, str(docs_path))
 
 from lib.config_dynamic import get_config
 from lib.utils import safe_json_dumps
 from lib.exceptions import NewscastAuditError, ProcessingError, create_error_response
 
-# Import DataQualityTracker from original processing.py
-# We'll need to move this to lib/ eventually, but for now import it
-from py.processing import DataQualityTracker
+# Import DataQualityTracker from lib
+from lib.quality import DataQualityTracker
 
 from .base import PipelineStep, PipelineContext
 from .steps import (

@@ -12,9 +12,6 @@ This is extracted from the validate_and_clean_data() function in processing.py.
 import sys
 from pathlib import Path
 
-# Add docs to path for imports
-docs_path = Path(__file__).parent.parent.parent.parent / 'docs'
-sys.path.insert(0, str(docs_path))
 
 from lib.cleaners import validate_input_data
 from lib.exceptions import EmptyDataError, DataValidationError
