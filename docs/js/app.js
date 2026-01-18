@@ -173,7 +173,8 @@ class NewscastAuditApp {
      */
     async parseExcelFile(file) {
         const arrayBuffer = await file.arrayBuffer();
-        const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+        // Use cellDates: true to force date parsing (avoids serial numbers like 45971)
+        const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
         return XLSX.utils.sheet_to_json(firstSheet);
     }
