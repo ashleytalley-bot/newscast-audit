@@ -140,6 +140,19 @@ class NewscastAuditApp {
             this.showLoading(LOADING_MESSAGES.processing);
             const result = await this.processDataWithPython(jsonData);
 
+            if (!result.success) {
+                // Show structured error
+                this.showError(result.error.message); // Simple fallback, use ErrorUI in full implementation
+                if (window.errorUI) window.errorUI.showError(result);
+                this.hideLoading();
+                return;
+            }
+
+            // Show data quality warnings
+            if (result.quality && result.quality.warnings.length > 0) {
+                if (window.errorUI) window.errorUI.showWarnings(result.quality);
+            }
+
             // Render results
             this.showLoading(LOADING_MESSAGES.rendering);
             this.processedData = result;
@@ -175,9 +188,45 @@ class NewscastAuditApp {
             this.showLoading(LOADING_MESSAGES.loadingLibs);
             await this.pyodide.loadPackage(['pandas', 'numpy']);
 
-            // Load processing module
-            const processingCode = await fetch('py/processing.py').then(r => r.text());
-            await this.pyodide.runPythonAsync(processingCode);
+            // Load all Python files
+            await this.loadPythonFiles();
+
+            // Import the processing function
+            await this.pyodide.runPythonAsync(`
+                from py.processing import process_json_data
+            `);
+        }
+    }
+
+    async loadPythonFiles() {
+        const files = [
+            'lib/__init__.py',
+            'lib/config.py',
+            'lib/cleaners.py',
+            'lib/builders.py',
+            'lib/utils.py',
+            'lib/exceptions.py',
+            'py/processing.py'
+        ];
+
+        // Ensure directories exist
+        this.pyodide.runPython(`
+            import os
+            os.makedirs('lib', exist_ok=True)
+            os.makedirs('py', exist_ok=True)
+        `);
+
+        // Fetch and write files
+        for (const file of files) {
+            try {
+                const response = await fetch(file);
+                if (!response.ok) throw new Error(`Failed to load ${file}`);
+                const content = await response.text();
+                this.pyodide.FS.writeFile(file, content);
+            } catch (err) {
+                console.error(`Error loading ${file}:`, err);
+                throw err;
+            }
         }
     }
 
@@ -188,7 +237,6 @@ class NewscastAuditApp {
         this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
 
         const resultJson = await this.pyodide.runPythonAsync(`
-            import json
             result = process_json_data(json_data)
             result
         `);
