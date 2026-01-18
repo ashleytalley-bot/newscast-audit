@@ -231,7 +231,8 @@ class NewscastAuditApp {
         // Fetch and write files
         for (const file of files) {
             try {
-                const response = await fetch(file);
+                // Add cache busting to ensure fresh code is loaded
+                const response = await fetch(file, { cache: 'no-store' });
                 if (!response.ok) throw new Error(`Failed to load ${file}`);
                 const content = await response.text();
                 // Ensure parent directory exists for nested files inside sub-sub-folders if any
