@@ -267,11 +267,16 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
         df['newscast_normalized'] = None
 
     # Step 3: Parse dates
+    # Step 3: Parse dates
     if 'newscast_date' in df.columns:
         df['newscast_date_parsed'] = pd.to_datetime(
             df['newscast_date'],
             errors='coerce'
         )
+        # Filter out implausible past dates (e.g. 1970 epoch issues from 0 values)
+        # We assume audits are recent (>= 2020)
+        mask_invalid_date = df['newscast_date_parsed'].dt.year < 2020
+        df.loc[mask_invalid_date, 'newscast_date_parsed'] = pd.NaT
     else:
         df['newscast_date_parsed'] = pd.NaT
 
