@@ -3,11 +3,11 @@
 Build script for Newscast Audit App.
 
 This script:
-1. Scans docs/lib and docs/py for Python files → py-files.json
-2. Copies config/ directory to docs/config/ for deployment
-3. Generates manifest of config files → docs/config-files.json
+1. Scans docs/lib and docs/py for Python files → docs/py-files.json
+2. Scans docs/config for YAML files → docs/config-files.json
 
-The frontend uses these manifests to know which files to load.
+The frontend uses these manifests to know which files to download into 
+the browser's virtual filesystem (Pyodide).
 
 Usage:
     python3 build.py
@@ -67,7 +67,7 @@ def build_python_manifest():
 def build_config_manifest():
     """Build manifest of config files."""
     print("=" * 60)
-    print("STEP 3: Building config file manifest...")
+    print("STEP 2: Building config file manifest...")
     print("=" * 60)
 
     if not DOCS_CONFIG_DIR.exists():

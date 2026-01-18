@@ -2,7 +2,6 @@
   "lib/__init__.py",
   "lib/builders.py",
   "lib/cleaners.py",
-  "lib/config.py",
   "lib/config_dynamic.py",
   "lib/exceptions.py",
   "lib/quality.py",
@@ -15,6 +14,5 @@
   "py/pipeline/steps/charts.py",
   "py/pipeline/steps/clean.py",
   "py/pipeline/steps/export.py",
-  "py/pipeline/steps/validate.py",
-  "py/processing_legacy.py"
+  "py/pipeline/steps/validate.py"
 ]
