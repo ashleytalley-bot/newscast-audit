@@ -1,509 +1,586 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   NEWSCAST AUDIT REPORT - Main Application
-   Handles file upload, Pyodide processing, chart rendering, and exports
+   NEWSCAST AUDIT REPORT - Refactored Application
+   Class-based architecture with better separation of concerns
    ═══════════════════════════════════════════════════════════════════════════ */
 
-// Global state
-let pyodide = null;
-let processedData = null;
-
-// DOM Elements
-const uploadSection = document.getElementById('upload-section');
-const resultsSection = document.getElementById('results-section');
-const dropZone = document.getElementById('drop-zone');
-const fileInput = document.getElementById('file-input');
-const loadingIndicator = document.getElementById('loading-indicator');
-const loadingText = document.getElementById('loading-text');
-const errorMessage = document.getElementById('error-message');
-
 // ═══════════════════════════════════════════════════════════════════════════
-// INITIALIZATION
+// CONFIGURATION CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════
 
-document.addEventListener('DOMContentLoaded', () => {
-    setupEventListeners();
-});
+const CHART_DEFAULTS = {
+    fonts: {
+        family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        size: 12
+    },
+    margins: {
+        overall: { b: 120, t: 60, l: 60, r: 20 },
+        perNewscast: { l: 200, r: 60, t: 20, b: 50 }
+    },
+    axisRange: [0, 110],
+    responsive: true
+};
 
-function setupEventListeners() {
-    // File input
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileSelect);
-
-    // Drag and drop
-    dropZone.addEventListener('dragover', handleDragOver);
-    dropZone.addEventListener('dragleave', handleDragLeave);
-    dropZone.addEventListener('drop', handleDrop);
-
-    // Export buttons
-    document.getElementById('btn-export-excel').addEventListener('click', exportExcel);
-    document.getElementById('btn-export-pptx').addEventListener('click', exportPowerPoint);
-    document.getElementById('btn-new-file').addEventListener('click', resetToUpload);
-}
+const LOADING_MESSAGES = {
+    readingFile: 'Reading Excel file...',
+    initPython: 'Initializing Python environment...',
+    loadingLibs: 'Loading data processing libraries...',
+    processing: 'Processing data...',
+    rendering: 'Rendering charts...'
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
-// FILE HANDLING
+// MAIN APPLICATION CLASS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function handleDragOver(e) {
-    e.preventDefault();
-    dropZone.classList.add('drag-over');
-}
+class NewscastAuditApp {
+    constructor() {
+        this.pyodide = null;
+        this.processedData = null;
 
-function handleDragLeave(e) {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-}
+        // DOM Elements
+        this.dom = {
+            uploadSection: document.getElementById('upload-section'),
+            resultsSection: document.getElementById('results-section'),
+            dropZone: document.getElementById('drop-zone'),
+            fileInput: document.getElementById('file-input'),
+            loadingIndicator: document.getElementById('loading-indicator'),
+            loadingText: document.getElementById('loading-text'),
+            errorMessage: document.getElementById('error-message')
+        };
 
-function handleDrop(e) {
-    e.preventDefault();
-    dropZone.classList.remove('drag-over');
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        processFile(files[0]);
-    }
-}
-
-function handleFileSelect(e) {
-    const files = e.target.files;
-    if (files.length > 0) {
-        processFile(files[0]);
-    }
-}
-
-async function processFile(file) {
-    // Validate file type
-    if (!file.name.match(/\.xlsx?$/i)) {
-        showError('Please upload an Excel file (.xlsx or .xls)');
-        return;
+        this.chartRenderer = new ChartRenderer();
+        this.tableRenderer = new TableRenderer();
+        this.exporter = new DataExporter();
     }
 
-    hideError();
-    showLoading('Reading Excel file...');
+    /**
+     * Initialize the application
+     */
+    init() {
+        this.setupEventListeners();
+    }
 
-    try {
-        // Parse Excel with SheetJS (in JavaScript, not Python)
+    /**
+     * Set up all event listeners
+     */
+    setupEventListeners() {
+        // File input
+        this.dom.dropZone.addEventListener('click', () => this.dom.fileInput.click());
+        this.dom.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
+
+        // Drag and drop
+        this.dom.dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
+        this.dom.dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
+        this.dom.dropZone.addEventListener('drop', (e) => this.handleDrop(e));
+
+        // Export buttons
+        document.getElementById('btn-export-excel').addEventListener('click', () => this.exportExcel());
+        document.getElementById('btn-export-pptx').addEventListener('click', () => this.exportPowerPoint());
+        document.getElementById('btn-new-file').addEventListener('click', () => this.resetToUpload());
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILE HANDLING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    handleDragOver(e) {
+        e.preventDefault();
+        this.dom.dropZone.classList.add('drag-over');
+    }
+
+    handleDragLeave(e) {
+        e.preventDefault();
+        this.dom.dropZone.classList.remove('drag-over');
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        this.dom.dropZone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            this.processFile(files[0]);
+        }
+    }
+
+    handleFileSelect(e) {
+        const files = e.target.files;
+        if (files.length > 0) {
+            this.processFile(files[0]);
+        }
+    }
+
+    /**
+     * Process uploaded Excel file
+     */
+    async processFile(file) {
+        try {
+            // Validate file type
+            if (!file.name.match(/\.xlsx?$/i)) {
+                this.showError('Please upload an Excel file (.xlsx or .xls)');
+                return;
+            }
+
+            this.hideError();
+            this.showLoading(LOADING_MESSAGES.readingFile);
+
+            // Parse Excel file
+            const jsonData = await this.parseExcelFile(file);
+
+            // Validate data
+            if (!jsonData || jsonData.length === 0) {
+                this.showError('Excel file appears to be empty');
+                return;
+            }
+
+            // Initialize Python environment
+            this.showLoading(LOADING_MESSAGES.initPython);
+            await this.initializePyodide();
+
+            // Process data
+            this.showLoading(LOADING_MESSAGES.processing);
+            const result = await this.processDataWithPython(jsonData);
+
+            // Render results
+            this.showLoading(LOADING_MESSAGES.rendering);
+            this.processedData = result;
+            this.renderResults();
+
+            this.hideLoading();
+            this.showResults();
+
+        } catch (error) {
+            this.hideLoading();
+            console.error('Processing error:', error);
+            this.showError(`Error processing file: ${error.message || error}`);
+        }
+    }
+
+    /**
+     * Parse Excel file to JSON using SheetJS
+     */
+    async parseExcelFile(file) {
         const arrayBuffer = await file.arrayBuffer();
         const workbook = XLSX.read(arrayBuffer, { type: 'array' });
         const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+        return XLSX.utils.sheet_to_json(firstSheet);
+    }
 
-        if (!jsonData || jsonData.length === 0) {
-            showError('Excel file appears to be empty');
+    /**
+     * Initialize Pyodide (Python in browser)
+     */
+    async initializePyodide() {
+        if (!this.pyodide) {
+            this.pyodide = await loadPyodide();
+
+            this.showLoading(LOADING_MESSAGES.loadingLibs);
+            await this.pyodide.loadPackage(['pandas', 'numpy']);
+
+            // Load processing module
+            const processingCode = await fetch('py/processing.py').then(r => r.text());
+            await this.pyodide.runPythonAsync(processingCode);
+        }
+    }
+
+    /**
+     * Process data using Python (via Pyodide)
+     */
+    async processDataWithPython(jsonData) {
+        this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
+
+        const resultJson = await this.pyodide.runPythonAsync(`
+            import json
+            result = process_json_data(json_data)
+            result
+        `);
+
+        return JSON.parse(resultJson);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // UI STATE MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════
+
+    showLoading(message) {
+        this.dom.loadingText.textContent = message;
+        this.dom.loadingIndicator.classList.remove('hidden');
+    }
+
+    hideLoading() {
+        this.dom.loadingIndicator.classList.add('hidden');
+    }
+
+    showError(message) {
+        this.dom.errorMessage.textContent = message;
+        this.dom.errorMessage.classList.remove('hidden');
+    }
+
+    hideError() {
+        this.dom.errorMessage.classList.add('hidden');
+    }
+
+    showResults() {
+        this.dom.uploadSection.classList.add('hidden');
+        this.dom.resultsSection.classList.remove('hidden');
+    }
+
+    resetToUpload() {
+        this.dom.resultsSection.classList.add('hidden');
+        this.dom.uploadSection.classList.remove('hidden');
+        this.dom.fileInput.value = '';
+        this.hideError();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RESULT RENDERING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    renderResults() {
+        this.renderSummary();
+        this.renderTables();
+        this.renderCharts();
+    }
+
+    renderSummary() {
+        const summary = this.processedData.summary;
+        document.getElementById('summary-rows').textContent = summary.record_count;
+        document.getElementById('summary-metrics').textContent = summary.metric_count;
+        document.getElementById('summary-missing').textContent = summary.missing_newscast;
+    }
+
+    renderTables() {
+        const tables = this.processedData.tables;
+
+        // Overall metrics
+        this.tableRenderer.render('table-overall', tables.overall, ['Question', 'Yes %'], this.processedData.config);
+
+        // Data quality
+        this.tableRenderer.render('table-quality', tables.data_quality, ['Question', 'Complete %', 'Missing'], this.processedData.config);
+
+        // Recent week (if available)
+        if (tables.recent) {
+            document.getElementById('recent-week-card').classList.remove('hidden');
+            document.getElementById('recent-week-title').textContent =
+                `Week of ${tables.recent_week_start}`;
+            this.tableRenderer.render('table-recent', tables.recent, ['Question', 'Yes %'], this.processedData.config);
+        } else {
+            document.getElementById('recent-week-card').classList.add('hidden');
+        }
+
+        // Volume by newscast
+        if (tables.volume) {
+            this.tableRenderer.render('table-volume', tables.volume, ['Newscast', 'Responses'], this.processedData.config);
+        }
+    }
+
+    renderCharts() {
+        const charts = this.processedData.charts;
+        const config = this.processedData.config;
+
+        // Overall chart
+        this.chartRenderer.renderOverallChart('chart-overall', charts.overall, config);
+
+        // Per-newscast charts
+        this.chartRenderer.renderPerNewscastCharts('charts-per-newscast', charts.per_newscast, config);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // EXPORT FUNCTIONALITY
+    // ═══════════════════════════════════════════════════════════════════════
+
+    async exportExcel() {
+        if (!this.processedData) return;
+        await this.exporter.exportToExcel(this.processedData);
+    }
+
+    async exportPowerPoint() {
+        if (!this.processedData) return;
+        await this.exporter.exportToPowerPoint(this.processedData, this.chartRenderer);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CHART RENDERER CLASS
+// ═══════════════════════════════════════════════════════════════════════════
+
+class ChartRenderer {
+    /**
+     * Create a Plotly bar trace
+     */
+    createBarTrace(labels, values, colors, isHorizontal = false) {
+        const baseTrace = {
+            type: 'bar',
+            marker: { color: colors },
+            text: values.map(v => v + '%'),
+            textposition: 'outside'
+        };
+
+        if (isHorizontal) {
+            return { ...baseTrace, y: labels, x: values, orientation: 'h' };
+        } else {
+            return { ...baseTrace, x: labels, y: values };
+        }
+    }
+
+    /**
+     * Create Plotly layout configuration
+     */
+    createLayout(title, config, isHorizontal = false) {
+        const margins = isHorizontal ? CHART_DEFAULTS.margins.perNewscast
+                                     : CHART_DEFAULTS.margins.overall;
+        const axis = isHorizontal ? 'xaxis' : 'yaxis';
+
+        const layout = {
+            title,
+            [axis]: {
+                title: 'Percent Yes',
+                range: CHART_DEFAULTS.axisRange,
+                ticksuffix: '%'
+            },
+            margin: margins,
+            font: {
+                family: CHART_DEFAULTS.fonts.family,
+                color: config.palette.primary
+            }
+        };
+
+        if (!isHorizontal) {
+            layout.xaxis = { tickangle: -35 };
+        }
+
+        return layout;
+    }
+
+    /**
+     * Render overall metrics chart
+     */
+    renderOverallChart(containerId, chartData, config) {
+        const trace = this.createBarTrace(chartData.labels, chartData.values, chartData.colors);
+        const layout = this.createLayout(`Overall Audit Metrics (n=${chartData.n})`, config);
+
+        Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+    }
+
+    /**
+     * Render per-newscast charts
+     */
+    renderPerNewscastCharts(containerId, perNewscastData, config) {
+        const container = document.getElementById(containerId);
+
+        if (!perNewscastData || perNewscastData.length === 0) {
+            container.innerHTML = '<p>No newscast data available</p>';
             return;
         }
 
-        showLoading('Initializing Python environment...');
+        container.innerHTML = '';
 
-        // Initialize Pyodide if needed
-        if (!pyodide) {
-            pyodide = await loadPyodide();
-            showLoading('Loading data processing libraries...');
-            await pyodide.loadPackage(['pandas']);
+        perNewscastData.forEach((data, index) => {
+            const chartId = `chart-newscast-${index}`;
+            const card = document.createElement('div');
+            card.className = 'chart-card';
+            card.innerHTML = `<h3>${data.newscast} (n=${data.n})</h3><div id="${chartId}" class="chart-container"></div>`;
+            container.appendChild(card);
 
-            // Load processing script
-            showLoading('Loading processing script...');
-            const response = await fetch('py/processing.py');
-            const pythonCode = await response.text();
-            await pyodide.runPythonAsync(pythonCode);
+            const trace = this.createBarTrace(data.labels, data.values, data.colors, true);
+            const layout = this.createLayout(null, config, true);
+
+            Plotly.newPlot(chartId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+        });
+    }
+
+    /**
+     * Capture chart as image (for PowerPoint export)
+     */
+    async captureChartAsImage(elementId, width = 800, height = 500) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.warn(`Chart element ${elementId} not found`);
+            return null;
         }
 
-        showLoading('Processing data...');
-
-        // Pass JSON data to Python (not Excel bytes)
-        pyodide.globals.set('json_data', JSON.stringify(jsonData));
-
-        // Process the data
-        const resultJson = await pyodide.runPythonAsync(`
-import json
-result = process_json_data(json_data)
-result
-        `);
-
-        // Parse result
-        processedData = JSON.parse(resultJson);
-
-        hideLoading();
-        renderResults();
-
-    } catch (error) {
-        hideLoading();
-        console.error('Processing error:', error);
-        showError('Error processing file: ' + (error.message || error));
+        try {
+            return await Plotly.toImage(element, {
+                format: 'png',
+                width,
+                height
+            });
+        } catch (error) {
+            console.error(`Error capturing chart ${elementId}:`, error);
+            return null;
+        }
     }
 }
 
-
 // ═══════════════════════════════════════════════════════════════════════════
-// UI HELPERS
-// ═══════════════════════════════════════════════════════════════════════════
-
-function showLoading(message) {
-    loadingText.textContent = message;
-    loadingIndicator.classList.remove('hidden');
-    dropZone.classList.add('hidden');
-}
-
-function hideLoading() {
-    loadingIndicator.classList.add('hidden');
-}
-
-function showError(message) {
-    errorMessage.textContent = message;
-    errorMessage.classList.remove('hidden');
-    dropZone.classList.remove('hidden');
-}
-
-function hideError() {
-    errorMessage.classList.add('hidden');
-}
-
-function resetToUpload() {
-    resultsSection.classList.add('hidden');
-    uploadSection.classList.remove('hidden');
-    dropZone.classList.remove('hidden');
-    fileInput.value = '';
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// RENDER RESULTS
+// TABLE RENDERER CLASS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function renderResults() {
-    uploadSection.classList.add('hidden');
-    resultsSection.classList.remove('hidden');
+class TableRenderer {
+    /**
+     * Render a data table
+     */
+    render(containerId, data, columns, config) {
+        const container = document.getElementById(containerId);
 
-    // Summary
-    document.getElementById('summary-rows').textContent = processedData.summary.record_count;
-    document.getElementById('summary-metrics').textContent = processedData.summary.metric_count;
-    document.getElementById('summary-missing').textContent = processedData.summary.missing_newscast;
+        if (!data || data.length === 0) {
+            container.innerHTML = '<p>No data available</p>';
+            return;
+        }
 
-    // Tables
-    renderTable('table-overall', processedData.tables.overall, ['Question', 'Yes %']);
-    renderTable('table-quality', processedData.tables.data_quality, ['Question', 'Complete %', 'Missing']);
+        const thresholds = config.thresholds;
+        let html = '<table><thead><tr>';
 
-    if (processedData.tables.recent) {
-        document.getElementById('recent-week-title').textContent =
-            `Current Week (${processedData.tables.recent_week_start})`;
-        renderTable('table-recent', processedData.tables.recent, ['Question', 'Yes %']);
-    } else {
-        document.getElementById('recent-week-card').classList.add('hidden');
-    }
-
-    if (processedData.tables.volume) {
-        renderTable('table-volume', processedData.tables.volume, ['Newscast', 'Responses']);
-    }
-
-    // Charts
-    renderOverallChart();
-    renderPerNewscastCharts();
-}
-
-function renderTable(containerId, data, columns) {
-    const container = document.getElementById(containerId);
-    if (!data || data.length === 0) {
-        container.innerHTML = '<p>No data available</p>';
-        return;
-    }
-
-    const thresholds = processedData.config.thresholds;
-
-    let html = '<table><thead><tr>';
-    columns.forEach(col => {
-        html += `<th>${col}</th>`;
-    });
-    html += '</tr></thead><tbody>';
-
-    data.forEach(row => {
-        html += '<tr>';
+        // Table headers
         columns.forEach(col => {
-            let value = row[col];
-            let className = '';
-
-            // Color code percentage columns
-            if (col === 'Yes %' || col === 'Complete %') {
-                if (value >= thresholds.good) {
-                    className = 'pct-good';
-                } else if (value <= thresholds.poor) {
-                    className = 'pct-poor';
-                } else {
-                    className = 'pct-moderate';
-                }
-                value = value + '%';
-            }
-
-            html += `<td class="${className}">${value}</td>`;
+            html += `<th>${col}</th>`;
         });
-        html += '</tr>';
-    });
+        html += '</tr></thead><tbody>';
 
-    html += '</tbody></table>';
-    container.innerHTML = html;
-}
+        // Table rows
+        data.forEach(row => {
+            html += '<tr>';
+            columns.forEach(col => {
+                const value = row[col];
+                const className = this.getCellClass(col, value, thresholds);
+                const displayValue = this.formatCellValue(col, value);
 
-// ═══════════════════════════════════════════════════════════════════════════
-// CHART RENDERING
-// ═══════════════════════════════════════════════════════════════════════════
+                html += `<td class="${className}">${displayValue}</td>`;
+            });
+            html += '</tr>';
+        });
 
-function renderOverallChart() {
-    const chartData = processedData.charts.overall;
-    const palette = processedData.config.palette;
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
 
-    const trace = {
-        x: chartData.labels,
-        y: chartData.values,
-        type: 'bar',
-        marker: {
-            color: chartData.colors
-        },
-        text: chartData.values.map(v => v + '%'),
-        textposition: 'outside',
-        textfont: {
-            color: palette.primary
+    /**
+     * Get CSS class for cell based on value and thresholds
+     */
+    getCellClass(columnName, value, thresholds) {
+        if (columnName === 'Yes %' || columnName === 'Complete %') {
+            if (value >= thresholds.good) return 'pct-good';
+            if (value <= thresholds.poor) return 'pct-poor';
+            return 'pct-moderate';
         }
-    };
-
-    const layout = {
-        title: `Overall Audit Metrics (n=${chartData.n})`,
-        yaxis: {
-            title: 'Percent Yes',
-            range: [0, 110],
-            ticksuffix: '%'
-        },
-        xaxis: {
-            tickangle: -35
-        },
-        margin: { b: 120, t: 60 },
-        font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }
-    };
-
-    Plotly.newPlot('chart-overall', [trace], layout, { responsive: true });
-}
-
-function renderPerNewscastCharts() {
-    const container = document.getElementById('charts-per-newscast');
-    const perNewscast = processedData.charts.per_newscast;
-
-    if (!perNewscast || perNewscast.length === 0) {
-        container.innerHTML = '<p>No newscast data available</p>';
-        return;
+        return '';
     }
 
-    container.innerHTML = '';
-
-    perNewscast.forEach((data, index) => {
-        const chartId = `chart-newscast-${index}`;
-        const card = document.createElement('div');
-        card.className = 'chart-card';
-        card.innerHTML = `<h3>${data.newscast} (n=${data.n})</h3><div id="${chartId}" class="chart-container"></div>`;
-        container.appendChild(card);
-
-        const trace = {
-            y: data.labels,
-            x: data.values,
-            type: 'bar',
-            orientation: 'h',
-            marker: {
-                color: data.colors
-            },
-            text: data.values.map(v => v + '%'),
-            textposition: 'outside',
-            textfont: {
-                color: processedData.config.palette.primary
-            }
-        };
-
-        const layout = {
-            xaxis: {
-                title: 'Percent Yes',
-                range: [0, 110],
-                ticksuffix: '%'
-            },
-            margin: { l: 200, r: 60, t: 20, b: 50 },
-            font: { family: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' }
-        };
-
-        Plotly.newPlot(chartId, [trace], layout, { responsive: true });
-    });
+    /**
+     * Format cell value for display
+     */
+    formatCellValue(columnName, value) {
+        if (columnName === 'Yes %' || columnName === 'Complete %') {
+            return value + '%';
+        }
+        return value;
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// EXCEL EXPORT
+// DATA EXPORTER CLASS
 // ═══════════════════════════════════════════════════════════════════════════
 
-function exportExcel() {
-    if (!processedData) return;
+class DataExporter {
+    /**
+     * Export data to Excel workbook
+     */
+    async exportToExcel(processedData) {
+        const workbook = XLSX.utils.book_new();
 
-    const wb = XLSX.utils.book_new();
-    const exportData = processedData.export_data;
+        // Overall metrics sheet
+        this.addSheetFromData(workbook, processedData.export_data.overall, 'Overall Metrics');
 
-    // Report Info sheet
-    const reportInfo = [
-        ['Property', 'Value'],
-        ['Report Generated', new Date().toISOString()],
-        ['Total Responses', processedData.summary.record_count],
-        ['Metrics Tracked', processedData.summary.metric_count],
-    ];
-    const wsInfo = XLSX.utils.aoa_to_sheet(reportInfo);
-    XLSX.utils.book_append_sheet(wb, wsInfo, 'Report Info');
+        // Data quality sheet
+        this.addSheetFromData(workbook, processedData.export_data.data_quality, 'Data Quality');
 
-    // Data Quality sheet
-    if (exportData.data_quality && exportData.data_quality.length > 0) {
-        const wsQuality = XLSX.utils.json_to_sheet(exportData.data_quality);
-        XLSX.utils.book_append_sheet(wb, wsQuality, 'Data Quality');
+        // Recent week sheet (if available)
+        if (processedData.export_data.recent && processedData.export_data.recent.length > 0) {
+            this.addSheetFromData(workbook, processedData.export_data.recent, 'Recent Week');
+        }
+
+        // Volume sheet
+        if (processedData.export_data.volume && processedData.export_data.volume.length > 0) {
+            this.addSheetFromData(workbook, processedData.export_data.volume, 'Volume by Newscast');
+        }
+
+        // Normalized data sheet
+        this.addSheetFromData(workbook, processedData.export_data.normalized, 'All Data');
+
+        // Download file
+        const timestamp = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(workbook, `newscast-audit-${timestamp}.xlsx`);
     }
 
-    // Overall Metrics sheet
-    if (exportData.overall && exportData.overall.length > 0) {
-        const wsOverall = XLSX.utils.json_to_sheet(exportData.overall);
-        XLSX.utils.book_append_sheet(wb, wsOverall, 'Overall Metrics');
+    /**
+     * Add a sheet to workbook from data
+     */
+    addSheetFromData(workbook, data, sheetName) {
+        const worksheet = XLSX.utils.json_to_sheet(data);
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
     }
 
-    // Recent Week sheet
-    if (exportData.recent && exportData.recent.length > 0) {
-        const wsRecent = XLSX.utils.json_to_sheet(exportData.recent);
-        XLSX.utils.book_append_sheet(wb, wsRecent, 'Recent Week Metrics');
-    }
+    /**
+     * Export data to PowerPoint presentation
+     */
+    async exportToPowerPoint(processedData, chartRenderer) {
+        const pptx = new PptxGenJS();
+        pptx.layout = 'LAYOUT_16x9';
+        pptx.author = 'Newscast Audit Tool';
+        pptx.company = 'TEGNA';
 
-    // Volume sheet
-    if (exportData.volume && exportData.volume.length > 0) {
-        const wsVolume = XLSX.utils.json_to_sheet(exportData.volume);
-        XLSX.utils.book_append_sheet(wb, wsVolume, 'Responses by Newscast');
-    }
+        // Title slide
+        let slide = pptx.addSlide();
+        slide.addText('Newscast Audit Report', {
+            x: 0.5, y: 2, w: 9, h: 1,
+            fontSize: 44, bold: true, color: '045ea8'
+        });
+        slide.addText(`Generated: ${new Date().toLocaleDateString()}`, {
+            x: 0.5, y: 3.5, w: 9, h: 0.5,
+            fontSize: 18, color: '666666'
+        });
 
-    // Normalized Data sheet
-    if (exportData.normalized && exportData.normalized.length > 0) {
-        const wsNormalized = XLSX.utils.json_to_sheet(exportData.normalized);
-        XLSX.utils.book_append_sheet(wb, wsNormalized, 'Normalized Data');
-    }
-
-    // Download
-    XLSX.writeFile(wb, 'newscast-audit-export.xlsx');
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// POWERPOINT EXPORT
-// ═══════════════════════════════════════════════════════════════════════════
-
-async function exportPowerPoint() {
-    if (!processedData) return;
-
-    const pptx = new PptxGenJS();
-
-    // Set presentation properties
-    pptx.author = 'TEGNA Newscast Audit';
-    pptx.title = 'Newscast Audit Report';
-    pptx.subject = 'Audit Results';
-
-    const palette = processedData.config.palette;
-
-    // Helper to convert hex to PptxGenJS color format
-    const hexToColor = (hex) => hex.replace('#', '');
-
-    // Title Slide
-    let slide = pptx.addSlide();
-    slide.addText('Newscast Audit Report', {
-        x: 0.5, y: 2, w: 9, h: 1.5,
-        fontSize: 36, bold: true, color: '000000',
-        align: 'center'
-    });
-    slide.addText(`${processedData.summary.record_count} Responses | ${processedData.summary.metric_count} Metrics`, {
-        x: 0.5, y: 3.5, w: 9, h: 0.5,
-        fontSize: 18, color: hexToColor(palette.muted),
-        align: 'center'
-    });
-    slide.addText(new Date().toLocaleDateString(), {
-        x: 0.5, y: 4.2, w: 9, h: 0.5,
-        fontSize: 14, color: hexToColor(palette.muted),
-        align: 'center'
-    });
-
-    // Overall Metrics Chart - capture as image
-    const overallImg = await captureChartAsImage('chart-overall');
-    if (overallImg) {
+        // Summary slide
         slide = pptx.addSlide();
-        slide.addText('Overall Audit Metrics', {
-            x: 0.5, y: 0.3, w: 9, h: 0.5,
-            fontSize: 24, bold: true, color: '000000'
-        });
-        slide.addImage({
-            data: overallImg,
-            x: 0.25, y: 1, w: 9.5, h: 5.5
-        });
-    }
+        slide.addText('Summary', { x: 0.5, y: 0.5, w: 9, h: 0.5, fontSize: 32, bold: true });
+        slide.addText([
+            { text: `Total Responses: ${processedData.summary.record_count}\n`, options: { breakLine: true } },
+            { text: `Metrics Tracked: ${processedData.summary.metric_count}\n`, options: { breakLine: true } },
+            { text: `Missing Newscast: ${processedData.summary.missing_newscast}`, options: { breakLine: true } }
+        ], { x: 0.5, y: 1.5, w: 9, h: 3, fontSize: 18 });
 
-    // Per-Newscast Charts
-    const perNewscastCharts = processedData.charts.per_newscast;
-    for (let i = 0; i < perNewscastCharts.length; i++) {
-        const chartId = `chart-newscast-${i}`;
-        const chartImg = await captureChartAsImage(chartId);
-        if (chartImg) {
+        // Overall chart slide
+        const overallChart = await chartRenderer.captureChartAsImage('chart-overall');
+        if (overallChart) {
             slide = pptx.addSlide();
-            slide.addText(`${perNewscastCharts[i].newscast} Metrics`, {
-                x: 0.5, y: 0.3, w: 9, h: 0.5,
-                fontSize: 24, bold: true, color: '000000'
-            });
-            slide.addImage({
-                data: chartImg,
-                x: 0.25, y: 1, w: 9.5, h: 5.5
-            });
+            slide.addText('Overall Audit Metrics', { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 28, bold: true });
+            slide.addImage({ data: overallChart, x: 0.5, y: 1, w: 9, h: 4.5 });
         }
-    }
 
-    // Summary Table Slide
-    slide = pptx.addSlide();
-    slide.addText('Overall Metrics Summary', {
-        x: 0.5, y: 0.3, w: 9, h: 0.5,
-        fontSize: 24, bold: true, color: '000000'
-    });
+        // Per-newscast charts
+        const perNewscastCharts = processedData.charts.per_newscast;
+        for (let i = 0; i < perNewscastCharts.length; i++) {
+            const chartId = `chart-newscast-${i}`;
+            const chartImg = await chartRenderer.captureChartAsImage(chartId);
 
-    const tableData = processedData.tables.overall.map(row => [
-        { text: row['Question'], options: { align: 'left' } },
-        {
-            text: row['Yes %'] + '%',
-            options: {
-                align: 'center',
-                color: row['Yes %'] >= 80 ? hexToColor(palette.primary) :
-                       row['Yes %'] <= 40 ? hexToColor(palette.alert) :
-                       hexToColor(palette.accent),
-                bold: true
+            if (chartImg) {
+                slide = pptx.addSlide();
+                slide.addText(`${perNewscastCharts[i].newscast} (n=${perNewscastCharts[i].n})`, {
+                    x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 28, bold: true
+                });
+                slide.addImage({ data: chartImg, x: 0.5, y: 1, w: 9, h: 4.5 });
             }
         }
-    ]);
 
-    slide.addTable(
-        [
-            [
-                { text: 'Question', options: { fill: 'EEEEEE', bold: true } },
-                { text: 'Yes %', options: { fill: 'EEEEEE', bold: true, align: 'center' } }
-            ],
-            ...tableData
-        ],
-        {
-            x: 0.5, y: 1, w: 9, h: 5,
-            fontSize: 12,
-            border: { pt: 0.5, color: 'CCCCCC' },
-            colW: [6.5, 2.5]
-        }
-    );
-
-    // Save file
-    pptx.writeFile({ fileName: 'newscast-audit-report.pptx' });
-}
-
-async function captureChartAsImage(elementId) {
-    const element = document.getElementById(elementId);
-    if (!element) return null;
-
-    try {
-        const dataUrl = await Plotly.toImage(element, {
-            format: 'png',
-            width: 1200,
-            height: 700,
-            scale: 2
-        });
-        return dataUrl;
-    } catch (error) {
-        console.error('Error capturing chart:', error);
-        return null;
+        // Download file
+        const timestamp = new Date().toISOString().split('T')[0];
+        pptx.writeFile({ fileName: `newscast-audit-${timestamp}.pptx` });
     }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// APPLICATION INITIALIZATION
+// ═══════════════════════════════════════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+    const app = new NewscastAuditApp();
+    app.init();
+});

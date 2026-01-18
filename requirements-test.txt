@@ -1,0 +1,6 @@
+# Testing dependencies for newscast-audit
+# Install with: pip install -r requirements-test.txt
+
+pytest>=9.0.0
+pandas>=2.3.0
+numpy>=1.26.0
