@@ -7,6 +7,11 @@
 *.js
 *.woff
 
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
 # Allow web app files in docs/
 !docs/
 !docs/**

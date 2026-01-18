@@ -1,30 +1,27 @@
-# Newscast Audit — Quick start
+# Newscast Audit — Web Application
 
-These instructions make it easy for a new contributor to set up the project, register a Jupyter kernel tied to the project's virtual environment, and render the Quarto report.
+A browser-based tool for analyzing newscast quality audit survey data from TEGNA broadcasting. Upload your Microsoft Forms Excel export and get instant analysis with interactive charts and exportable reports.
 
-## Web App (GitHub Pages)
+## Features
 
-A web-based version is available that allows you to upload Excel files and generate reports directly in the browser:
+- **Drag-and-drop Excel upload** - No installation required, runs entirely in your browser
+- **Comprehensive analysis** - Overall metrics, per-newscast breakdowns, weekly trends
+- **Data quality tracking** - Completeness metrics to identify gaps
+- **Export options** - Download results as Excel workbook or PowerPoint presentation
+- **Privacy-first** - All processing happens client-side; your data never leaves your computer
 
-**Live Site:** https://[your-username].github.io/newscast-audit/
+## Quick Start
 
-### Features
-- Drag-and-drop Excel file upload
-- All charts from the Quarto report (overall, per-newscast, weekly trends)
-- Data quality tables
-- Download Excel export
-- Download PowerPoint slides
+### Live Web App
 
-### GitHub Pages Setup
+Visit the live site: **https://[your-username].github.io/newscast-audit/**
 
-1. Go to your repository on GitHub
-2. Navigate to **Settings** > **Pages**
-3. Under "Source", select **Deploy from a branch**
-4. Select the `main` branch and `/docs` folder
-5. Click Save
-6. Your site will be available at `https://[your-username].github.io/newscast-audit/`
+1. Open the site in your browser
+2. Drag and drop your Microsoft Forms Excel export
+3. View results: summary stats, tables, and interactive charts
+4. Export to Excel or PowerPoint as needed
 
-### Local Testing
+### Local Development
 
 To test the web app locally:
 
@@ -34,51 +31,119 @@ python3 -m http.server 8000
 # Open http://localhost:8000 in your browser
 ```
 
----
+## Project Structure
 
-## Quarto Report
-
-1) Create virtual environment, install dependencies, and register kernel (recommended):
-
-```bash
-# from repo root
-./scripts/setup_venv.sh
+```
+newscast-audit/
+├── docs/                      # Web application (GitHub Pages)
+│   ├── index.html            # Main web UI
+│   ├── css/style.css         # TEGNA branding and styles
+│   ├── js/app.js             # Client-side application logic
+│   └── py/processing.py      # Main processing orchestrator
+│
+├── lib/                       # Shared Python library
+│   ├── __init__.py           # Package exports
+│   ├── config.py             # Configuration constants
+│   ├── cleaners.py           # Data validation and cleaning
+│   ├── builders.py           # Metric calculations
+│   └── utils.py              # Helper functions
+│
+└── README.md                  # This file
 ```
 
-2) Activate the venv and render the report:
+## Technology Stack
 
-```bash
-source .venv/bin/activate
-quarto render opex-newscast-audit.qmd --to html
-```
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript
+- **Python Runtime**: Pyodide 0.24.1 (Python in WebAssembly)
+- **Data Processing**: Pandas 2.3.3, NumPy
+- **Visualization**: Plotly 5.24.1
+- **Excel I/O**: SheetJS (client-side parsing)
+- **PowerPoint Export**: PptxGenJS 3.12.0
 
-Notes:
-- The setup script installs packages listed in `requirements.txt` and registers a Jupyter kernel named `newscast-audit-venv`.
-- If you prefer Conda, create a conda env, install the same packages, then register the kernel with:
+## How It Works
 
-```bash
-python -m ipykernel install --user --name=newscast-audit-venv --display-name "newscast-audit (conda)"
-```
+1. **User uploads Excel file** - Parsed client-side with SheetJS
+2. **Pyodide loads** - Python interpreter runs in browser via WebAssembly
+3. **Data processing** - Python cleans, validates, and analyzes survey data
+4. **Results rendered** - Interactive charts and tables displayed
+5. **Export** - Generate Excel workbook or PowerPoint presentation
 
-- Avoid installing packages system-wide; using a virtual environment keeps dependencies isolated.
+All processing happens in your browser - no server required, no data uploaded anywhere.
 
-PDF rendering notes:
-- Quarto can render to PDF, but a LaTeX engine is required (TinyTeX, MacTeX, or TeX Live).
-- To render a PDF locally, install TinyTeX (recommended for minimal install):
+## Configuration
 
-```bash
-R -e "install.packages('tinytex'); tinytex::install_tinytex()"
-```
+Edit configuration values in `lib/config.py`:
 
-or install MacTeX on macOS from: https://tug.org/mactex/
+- **COLUMN_MAPPING** - Maps Excel columns to internal names
+- **METRIC_COLUMNS** - The 10 audit questions tracked
+- **THRESHOLDS** - Performance bands (80% good, 40% poor)
+- **NEWSCAST_ORDER** - Timeslot sorting order
+- **PALETTE** - TEGNA brand colors
 
-Then render:
+## Development
 
-```bash
-source .venv/bin/activate
-quarto render opex-newscast-audit.qmd --to pdf
-```
+### Modifying Processing Logic
 
-We've added a `Makefile` target `make pdf` to simplify this.
+The codebase uses a modular architecture:
 
-If you want, I can also add a small `Makefile` with targets for `setup` and `render`.
+- **lib/config.py** - Change constants, thresholds, color palette
+- **lib/cleaners.py** - Modify data cleaning and normalization logic
+- **lib/builders.py** - Adjust metric calculations
+- **lib/utils.py** - Update helpers (formatting, sorting, JSON serialization)
+- **docs/py/processing.py** - Orchestrates the pipeline (rarely needs changes)
+
+### Testing Changes
+
+1. Make changes to library files
+2. Reload `http://localhost:8000` in browser
+3. Upload a test Excel file
+4. Verify results in browser console and UI
+
+## GitHub Pages Deployment
+
+The web app is automatically deployed from the `/docs` folder.
+
+### Setup
+
+1. Go to repository **Settings** > **Pages**
+2. Under "Source", select **Deploy from a branch**
+3. Select the `main` branch and `/docs` folder
+4. Click Save
+5. Site will be available at `https://[your-username].github.io/newscast-audit/`
+
+### Updating
+
+Simply commit and push changes to the `main` branch. GitHub Pages will automatically rebuild and deploy.
+
+## Data Format
+
+The app expects a Microsoft Forms Excel export with these columns:
+
+- **Which newscast are you auditing?** - Free text newscast name
+- **Date of newscast:** - Date of the audited newscast
+- **10 audit question columns** - Yes/No/N/A responses
+
+See `lib/config.py` for full column mapping.
+
+## Metrics Tracked
+
+The tool analyzes 10 editorial quality metrics:
+
+1. Urgency and why now
+2. Streaming teases every 30min
+3. Streaming/mobile shorts usage
+4. Maps & graphics within 30min
+5. Clear weather story
+6. Weather new/now/next focus
+7. Audience ("you") language & call-to-action
+8. Anchor shots & name supers
+9. File video properly referenced
+10. Local context & community stories
+
+## Support
+
+For issues or questions, please open a GitHub issue in this repository.
+
+## License
+
+Internal TEGNA tool - not for public distribution.
