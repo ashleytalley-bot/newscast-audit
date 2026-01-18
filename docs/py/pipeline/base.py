@@ -10,6 +10,8 @@ from typing import Any, Dict, Optional
 import pandas as pd
 
 
+from lib.quality import DataQualityTracker
+
 class PipelineContext:
     """
     Context object that flows through the pipeline.
@@ -23,16 +25,17 @@ class PipelineContext:
         quality_tracker: Tracks data quality warnings and info
     """
 
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data: pd.DataFrame, tracker: Optional[DataQualityTracker] = None):
         """
         Initialize pipeline context.
 
         Args:
             data: Initial DataFrame to process
+            tracker: Optional tracker, creates new one if None
         """
         self.data = data
         self.metadata: Dict[str, Any] = {}
-        self.quality_tracker = None  # Will be set by orchestrator
+        self.quality_tracker = tracker if tracker is not None else DataQualityTracker()
 
     def set(self, key: str, value: Any) -> None:
         """Store a value in the context."""

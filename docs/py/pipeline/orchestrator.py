@@ -89,8 +89,7 @@ class ProcessingPipeline:
                 )
 
             # Create pipeline context
-            context = PipelineContext(df_raw)
-            context.quality_tracker = quality_tracker
+            context = PipelineContext(df_raw, tracker=quality_tracker)
 
             # Execute each step in sequence
             for step in self.steps:

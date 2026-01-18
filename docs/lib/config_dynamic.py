@@ -13,8 +13,8 @@ Workflow:
 """
 
 import sys
-from typing import Optional, Dict, List
-import yaml
+from typing import Optional, Dict, List, Tuple
+import yaml  # type: ignore
 
 class Config:
     """
@@ -31,8 +31,8 @@ class Config:
         
         # New: Normalization patterns
         # List of (pattern, output, description) tuples
-        self.NORMALIZATION_PATTERNS: List[tuple] = []
-        self.AMBIGUOUS_PATTERNS: List[tuple] = []
+        self.NORMALIZATION_PATTERNS: List[Tuple[str, str, str]] = []
+        self.AMBIGUOUS_PATTERNS: List[Tuple[str, str]] = []
         self.NORMALIZER_CONFIG: Dict = {}
 
         self._yaml_loaded = False

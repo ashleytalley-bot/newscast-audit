@@ -80,7 +80,7 @@ def question_labels(metric_ids: List[str]) -> List[str]:
     return [s.replace('_', ' ').title() for s in metric_ids]
 
 
-def color_for(value: float) -> str:
+def color_for(value: Optional[float]) -> str:
     """
     Return color code based on value and configured thresholds.
     """

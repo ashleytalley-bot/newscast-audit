@@ -1,6 +1,22 @@
-# Testing dependencies for newscast-audit
+# -----------------------------------------------------------------------------
+# Local Development & Testing Dependencies
+# -----------------------------------------------------------------------------
+# This file lists the Python packages required to run tests and static analysis
+# scripts (like check_types.sh) on your machine.
+#
+# NOTE: The actual application runs in the browser using Pyodide, so these 
+# dependencies are NOT required for production deployment (only for development).
+#
 # Install with: pip install -r requirements-test.txt
+# -----------------------------------------------------------------------------
 
+# Testing Framework
 pytest>=9.0.0
-pandas>=2.3.0
+
+# Core Logic Dependencies (version parity for tests)
+pandas>=2.0.0
 numpy>=1.26.0
+PyYAML>=6.0.0
+
+# Static Analysis & Type Checking
+mypy>=1.14.0
