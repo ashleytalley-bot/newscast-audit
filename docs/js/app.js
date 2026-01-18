@@ -117,7 +117,7 @@ class NewscastAuditApp {
         try {
             // Validate file type
             if (!file.name.match(/\.xlsx?$/i)) {
-                this.showError('Please upload an Excel file (.xlsx or .xls)');
+                errorUI.showError('Please upload an Excel file (.xlsx or .xls)');
                 return;
             }
 
@@ -129,7 +129,7 @@ class NewscastAuditApp {
 
             // Validate data
             if (!jsonData || jsonData.length === 0) {
-                this.showError('Excel file appears to be empty');
+                errorUI.showError('Excel file appears to be empty');
                 return;
             }
 
@@ -142,16 +142,15 @@ class NewscastAuditApp {
             const result = await this.processDataWithPython(jsonData);
 
             if (!result.success) {
-                // Show structured error
-                this.showError(result.error.message); // Simple fallback, use ErrorUI in full implementation
-                if (window.errorUI) window.errorUI.showError(result);
+                // Show structured error with ErrorUI
+                errorUI.showError(result);
                 this.hideLoading();
                 return;
             }
 
             // Show data quality warnings
             if (result.quality && result.quality.warnings.length > 0) {
-                if (window.errorUI) window.errorUI.showWarnings(result.quality);
+                errorUI.showWarnings(result.quality);
             }
 
             // Render results
@@ -165,7 +164,7 @@ class NewscastAuditApp {
         } catch (error) {
             this.hideLoading();
             console.error('Processing error:', error);
-            this.showError(`Error processing file: ${error.message || error}`);
+            errorUI.showError(`Error processing file: ${error.message || error}`);
         }
     }
 
@@ -265,6 +264,7 @@ class NewscastAuditApp {
 
     hideError() {
         this.dom.errorMessage.classList.add('hidden');
+        errorUI.clearAll();
     }
 
     showResults() {
@@ -277,6 +277,7 @@ class NewscastAuditApp {
         this.dom.uploadSection.classList.remove('hidden');
         this.dom.fileInput.value = '';
         this.hideError();
+        errorUI.clearAll();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
