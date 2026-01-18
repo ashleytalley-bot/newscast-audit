@@ -12,8 +12,10 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import pandas as pd
+import traceback
+import numpy as np
 import json
-from typing import Dict, List, Any
+from typing import List, Dict, Any, Optional
 
 from lib import (
     # Config
@@ -52,7 +54,7 @@ class DataQualityTracker:
         self.warnings: List[Dict[str, Any]] = []
         self.info: List[Dict[str, Any]] = []
 
-    def add_warning(self, message: str, count: int = 0, examples: List[str] = None):
+    def add_warning(self, message: str, count: int = 0, examples: Optional[List[str]] = None):
         """Add a data quality warning."""
         self.warnings.append({
             "level": "warning",
@@ -61,7 +63,7 @@ class DataQualityTracker:
             "examples": (examples or [])[:5]  # Limit to 5 examples
         })
 
-    def add_info(self, message: str, details: Dict[str, Any] = None):
+    def add_info(self, message: str, details: Optional[Dict[str, Any]] = None):
         """Add informational message."""
         info_item = {"level": "info", "message": message}
         if details:

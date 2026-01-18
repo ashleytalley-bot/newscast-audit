@@ -9,7 +9,8 @@ data structures for tables and charts:
 """
 
 import pandas as pd
-from typing import Optional, List, Dict
+import numpy as np
+from typing import Optional, List, Dict, Any
 
 from .utils import question_labels, with_week_start
 
@@ -32,13 +33,16 @@ def build_yes_percent_table(
     summary = df[metric_columns].mean(skipna=True) * 100
 
     # Round to integers, preserve NA
-    summary = summary.round(0).where(summary.notna(), pd.NA).astype("Int64")
+    # Round to integers, preserve NA (using numpy logic to avoid mypy overload issues)
+    # The direct usage of pd.NA in where() causes overload confusion.
+    # We cast to float first, round, then astype Int64 handles NA implicitly/explicitly.
+    summary = summary.round(0).astype("Int64")
 
     # Convert to tidy format
     out = summary.rename('Yes %').reset_index().rename(columns={'index': 'Question'})
 
     # Human-friendly question labels
-    out['Question'] = question_labels(out['Question'])
+    out['Question'] = question_labels(out['Question'].tolist())
 
     return out
 
@@ -78,7 +82,7 @@ def weekly_percent_series(
     metric_columns: List[str],
     newscast: Optional[str] = None,
     question: Optional[str] = None
-) -> Optional[Dict[str, any]]:
+) -> Optional[Dict[str, Any]]:
     """
     Compute weekly average percent Yes with optional filters.
 
@@ -119,9 +123,14 @@ def weekly_percent_series(
         return None
 
     # Add week_start column
-    data = with_week_start(data)
-    if data is None or data.empty:
+    # with_week_start can return None if 'newscast_date_parsed' missing
+    data_with_week = with_week_start(data)
+    if data_with_week is None or data_with_week.empty:
         return None
+    
+    # Assert data is not None for mypy
+    assert data_with_week is not None
+    data = data_with_week
 
     # Step 1: Compute row average (mean across questions for each audit)
     data['overall_mean'] = data[metrics].mean(axis=1)
@@ -134,5 +143,5 @@ def weekly_percent_series(
 
     return {
         "dates": [d.strftime('%Y-%m-%d') for d in weekly_agg.index],
-        "pct": weekly_agg.values * 100,
+        "pct": weekly_agg.astype(float).to_numpy() * 100,
     }
