@@ -14,12 +14,10 @@ Usage:
 """
 import os
 import json
-import shutil
 from pathlib import Path
 
 # Configuration
 DOCS_DIR = Path("docs")
-CONFIG_DIR = Path("config")
 PY_OUTPUT_FILE = DOCS_DIR / "py-files.json"
 CONFIG_OUTPUT_FILE = DOCS_DIR / "config-files.json"
 DOCS_CONFIG_DIR = DOCS_DIR / "config"
@@ -64,33 +62,6 @@ def build_python_manifest():
     return len(file_list)
 
 
-def copy_config_files():
-    """Copy config directory to docs/config for deployment."""
-    print("=" * 60)
-    print("STEP 2: Copying config files to docs/...")
-    print("=" * 60)
-
-    if not CONFIG_DIR.exists():
-        print(f"Warning: {CONFIG_DIR} not found - skipping config copy")
-        return 0
-
-    # Remove old docs/config if exists
-    if DOCS_CONFIG_DIR.exists():
-        shutil.rmtree(DOCS_CONFIG_DIR)
-        print(f"  Removed old {DOCS_CONFIG_DIR}")
-
-    # Copy entire config directory
-    shutil.copytree(CONFIG_DIR, DOCS_CONFIG_DIR)
-    print(f"  Copied {CONFIG_DIR} → {DOCS_CONFIG_DIR}")
-
-    # Count files
-    config_files = list(DOCS_CONFIG_DIR.rglob("*.yaml"))
-    for f in config_files:
-        rel_path = f.relative_to(DOCS_DIR)
-        print(f"    - {rel_path}")
-
-    print(f"\n✓ Copied {len(config_files)} config files\n")
-    return len(config_files)
 
 
 def build_config_manifest():
@@ -130,8 +101,7 @@ def main():
     print("=" * 60 + "\n")
 
     py_count = build_python_manifest()
-    config_count = copy_config_files()
-    manifest_count = build_config_manifest()
+    config_count = build_config_manifest()
 
     print("=" * 60)
     print("BUILD SUMMARY")

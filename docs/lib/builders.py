@@ -43,8 +43,8 @@ def build_yes_percent_table(df: pd.DataFrame, metric_columns: List[str]) -> pd.D
 
     result = pd.DataFrame({
         'Question': labels,
-        'Yes %': means.round(1),
-        'Count': counts
+        'Yes %': means.round(1).values,
+        'Count': counts.values
     })
 
     # Fill NaNs with 0 if needed, or leave as NaN
@@ -73,8 +73,8 @@ def build_data_quality_table(df: pd.DataFrame, metric_columns: List[str]) -> pd.
 
     result = pd.DataFrame({
         'Question': labels,
-        'Complete %': completeness.round(1),
-        'Missing': missing
+        'Complete %': completeness.round(1).values,
+        'Missing': missing.values
     })
 
     return result

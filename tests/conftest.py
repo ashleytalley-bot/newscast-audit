@@ -15,7 +15,7 @@ def setup_config():
     This mimics the app loading behavior.
     """
     project_root = Path(__file__).parent.parent
-    config_dir = project_root / "config"
+    config_dir = project_root / "docs/config"
     
     # Read files
     with open(config_dir / "stations/default.yaml") as f:
