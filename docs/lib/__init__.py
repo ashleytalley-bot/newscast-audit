@@ -24,7 +24,6 @@ from .builders import (
 )
 
 from .utils import (
-    SafeJSONEncoder,
     safe_json_dumps,
     question_labels,
     sort_newscast_series,
@@ -58,7 +57,6 @@ __all__ = [
     'build_data_quality_table',
     'weekly_percent_series',
     # Utils
-    'SafeJSONEncoder',
     'safe_json_dumps',
     'question_labels',
     'sort_newscast_series',
