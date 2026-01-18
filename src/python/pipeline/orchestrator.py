@@ -18,7 +18,7 @@ from typing import Dict, Any
 docs_path = Path(__file__).parent.parent.parent / 'docs'
 sys.path.insert(0, str(docs_path))
 
-from lib.config import PALETTE, THRESHOLDS
+from lib.config_dynamic import get_config
 from lib.utils import safe_json_dumps
 from lib.exceptions import NewscastAuditError, ProcessingError, create_error_response
 
@@ -178,8 +178,8 @@ class ProcessingPipeline:
             "charts": charts,
             "export_data": export_data,
             "config": {
-                "palette": PALETTE,
-                "thresholds": THRESHOLDS,
+                "palette": get_config().PALETTE,
+                "thresholds": get_config().THRESHOLDS,
                 "metric_columns": metric_columns
             },
             "quality": context.quality_tracker.to_dict()

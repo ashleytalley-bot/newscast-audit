@@ -21,7 +21,7 @@ docs_path = Path(__file__).parent.parent.parent.parent / 'docs'
 sys.path.insert(0, str(docs_path))
 
 from lib.cleaners import clean_data
-from lib.config import NEWSCAST_ORDER
+from lib.config_dynamic import get_config
 from lib.exceptions import ProcessingError, InsufficientDataError
 from ..base import PipelineStep, PipelineContext
 
@@ -95,7 +95,7 @@ class CleaningStep(PipelineStep):
         # Track unknown newscast formats
         if 'newscast_normalized' in df.columns and 'newscast' in df.columns:
             unknown_mask = (df['newscast'].notna()) & (
-                ~df['newscast_normalized'].isin(NEWSCAST_ORDER)
+                ~df['newscast_normalized'].isin(get_config().NEWSCAST_ORDER)
             ) & (df['newscast_normalized'].notna())
 
             if unknown_mask.any():

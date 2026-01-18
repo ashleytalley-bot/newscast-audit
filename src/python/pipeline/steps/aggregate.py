@@ -20,7 +20,7 @@ docs_path = Path(__file__).parent.parent.parent.parent / 'docs'
 sys.path.insert(0, str(docs_path))
 
 from lib.builders import build_yes_percent_table, build_data_quality_table
-from lib.config import NEWSCAST_ORDER
+from lib.config_dynamic import get_config
 from lib.exceptions import ProcessingError, DataValidationError
 from ..base import PipelineStep, PipelineContext
 
@@ -109,7 +109,7 @@ class AggregationStep(PipelineStep):
                 volume['Newscast'] = volume['Newscast'].fillna('Unspecified')
 
                 # Sort by newscast order
-                order_lookup = {name: idx for idx, name in enumerate(NEWSCAST_ORDER)}
+                order_lookup = {name: idx for idx, name in enumerate(get_config().NEWSCAST_ORDER)}
                 volume_df = volume.sort_values(
                     by='Newscast',
                     key=lambda x: x.map(lambda v: order_lookup.get(v, len(order_lookup)))

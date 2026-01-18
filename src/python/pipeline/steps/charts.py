@@ -19,7 +19,7 @@ import pandas as pd
 docs_path = Path(__file__).parent.parent.parent.parent / 'docs'
 sys.path.insert(0, str(docs_path))
 
-from lib.config import NEWSCAST_ORDER
+from lib.config_dynamic import get_config
 from lib.utils import question_labels, color_for, with_week_start, sort_newscast_series
 from lib.builders import weekly_percent_series
 from ..base import PipelineStep, PipelineContext
@@ -68,7 +68,7 @@ class ChartGenerationStep(PipelineStep):
         # Per-newscast charts: separate chart for each newscast
         per_newscast_charts = []
         if 'newscast_normalized' in df.columns:
-            order_lookup = {name: idx for idx, name in enumerate(NEWSCAST_ORDER)}
+            order_lookup = {name: idx for idx, name in enumerate(get_config().NEWSCAST_ORDER)}
             unique_newscasts = sorted(
                 [nc for nc in df['newscast_normalized'].dropna().unique()],
                 key=lambda x: order_lookup.get(x, len(order_lookup) + 1)
