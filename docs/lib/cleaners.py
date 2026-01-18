@@ -61,6 +61,10 @@ _NEWSCAST_PATTERNS = [
     (r'\b5\s*a\s*[-–]\s*7\s*a\b', '5 - 7 am', '5a-7a abbreviated'),
     (r'\b7\s*a\s*[-–]\s*9\s*a\b', '7 - 9 am', '7a-9a abbreviated'),
 
+    # "To" ranges (5 to 7am, 7 to 9am, 7 to 8am)
+    (r'5\s+to\s+7\s*(?:am|a\.m\.?)?', '5 - 7 am', '5 to 7 range'),
+    (r'7\s+to\s+[89]\s*(?:am|a\.m\.?)?', '7 - 9 am', '7 to 8/9 range'),
+
     # Time ranges with full AM notation
     (r'5\s*[-–:]\s*7\s*(?:am|a\.m\.)', '5 - 7 am', '5-7am range'),
     (r'7\s*[-–:]\s*9\s*(?:am|a\.m\.)', '7 - 9 am', '7-9am range'),
