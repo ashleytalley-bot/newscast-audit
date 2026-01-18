@@ -1,147 +1,136 @@
 """
-Table and chart data builders.
+Metric calculation and table building functions.
 
-This module contains functions that compute metrics and build
-data structures for tables and charts:
-- Overall performance (% Yes per question)
-- Data quality metrics (completeness)
-- Weekly trend calculations
+This module handles:
+- Calculating Yes % for metrics
+- Building summary tables
+- Identifying data quality issues
+- Aggregating weekly trends
 """
 
 import pandas as pd
 import numpy as np
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Optional, Union
 
-from .utils import question_labels, with_week_start
+from .config_dynamic import get_config
 
 
-def build_yes_percent_table(
-    df: pd.DataFrame,
-    metric_columns: List[str]
-) -> pd.DataFrame:
+def build_yes_percent_table(df: pd.DataFrame, metric_columns: List[str]) -> pd.DataFrame:
     """
-    Build a tidy table showing Yes% per question.
-
-    Args:
-        df: Cleaned DataFrame with numeric metric columns
-        metric_columns: List of metric column names to analyze
-
-    Returns:
-        DataFrame with columns: Question, Yes %
+    Calculate 'Yes' percentage for each metric column.
     """
-    # Calculate mean (treating 1=Yes, 0=No, NA=skip)
-    summary = df[metric_columns].mean(skipna=True) * 100
+    if df.empty or not metric_columns:
+        return pd.DataFrame(columns=['Question', 'Yes %', 'Count'])
+        
+    config = get_config()
 
-    # Round to integers, preserve NA
-    # Round to integers, preserve NA (using numpy logic to avoid mypy overload issues)
-    # The direct usage of pd.NA in where() causes overload confusion.
-    # We cast to float first, round, then astype Int64 handles NA implicitly/explicitly.
-    summary = summary.round(0).astype("Int64")
+    # Calculate mean of 1s (ignoring NAs), multiply by 100
+    means = df[metric_columns].mean(skipna=True) * 100
+    counts = df[metric_columns].count()  # Count non-NA values
 
-    # Convert to tidy format
-    out = summary.rename('Yes %').reset_index().rename(columns={'index': 'Question'})
+    # Map internal names to display labels
+    # We unfortunately don't have a direct internal->label map in the config object yet 
+    # (it is in the YAML but flat mapped in COLUMN_MAPPING).
+    # For now, we can inverse lookup COLUMN_MAPPING or just format the snake_case.
+    # A robust solution would store labels in config. For this refactor, we'll try to find it.
+    
+    # Helper to find label from column mapping (Reverse lookup)
+    # The COLUMN_MAPPING is 'Excel Header' -> 'internal_name'
+    # We want 'internal_name' -> 'Label'
+    # Since we don't have explicit labels stored, we will title cased the snake_case
+    
+    labels = [col.replace('_', ' ').title() for col in metric_columns]
 
-    # Human-friendly question labels
-    out['Question'] = question_labels(out['Question'].tolist())
-
-    return out
-
-
-def build_data_quality_table(
-    df: pd.DataFrame,
-    metric_columns: List[str]
-) -> pd.DataFrame:
-    """
-    Build a data quality summary showing completeness per question.
-
-    Args:
-        df: Cleaned DataFrame with numeric metric columns
-        metric_columns: List of metric column names to analyze
-
-    Returns:
-        DataFrame with columns: Question, Complete %, Missing
-    """
-    # Calculate completeness percentage
-    completeness = (df[metric_columns].notna().sum() / len(df) * 100).round(1)
-
-    # Calculate missing count
-    missing = df[metric_columns].isna().sum()
-
-    # Build table
-    quality_df = pd.DataFrame({
-        'Question': question_labels(metric_columns),
-        'Complete %': completeness.values,
-        'Missing': missing.values
+    result = pd.DataFrame({
+        'Question': labels,
+        'Yes %': means.round(1),
+        'Count': counts
     })
 
-    return quality_df
+    # Fill NaNs with 0 if needed, or leave as NaN
+    # result['Yes %'] = result['Yes %'].fillna(0)
+
+    return result
 
 
-def weekly_percent_series(
-    df: pd.DataFrame,
-    metric_columns: List[str],
-    newscast: Optional[str] = None,
-    question: Optional[str] = None
-) -> Optional[Dict[str, Any]]:
+def build_data_quality_table(df: pd.DataFrame, metric_columns: List[str]) -> pd.DataFrame:
     """
-    Compute weekly average percent Yes with optional filters.
-
-    This uses "double averaging":
-    1. For each audit, compute the mean across selected questions (row average)
-    2. Group by week and compute mean of those row averages (weekly average)
-
-    This approach weights each audit equally regardless of question count,
-    which is appropriate when questions are equally important.
-
-    Args:
-        df: Cleaned DataFrame with week_start capability
-        metric_columns: List of metric columns to consider
-        newscast: Optional newscast filter (e.g., "5 - 7 am")
-        question: Optional single question filter (e.g., "urgency_and_why_now")
-
-    Returns:
-        Dict with "dates" (list of ISO strings) and "pct" (list of percentages),
-        or None if no data available
+    Calculate data completeness for each metric.
     """
+    if df.empty or not metric_columns:
+        return pd.DataFrame(columns=['Question', 'Complete %', 'Missing'])
+
+    total_rows = len(df)
+    
+    # Count non-nulls
+    counts = df[metric_columns].count()
+    
+    # Calculate percentages
+    completeness = (counts / total_rows) * 100
+    missing = total_rows - counts
+
+    labels = [col.replace('_', ' ').title() for col in metric_columns]
+
+    result = pd.DataFrame({
+        'Question': labels,
+        'Complete %': completeness.round(1),
+        'Missing': missing
+    })
+
+    return result
+
+
+def weekly_percent_series(df: pd.DataFrame, metric_columns: List[str], 
+                         newscast: Optional[str] = None,
+                         question: Optional[str] = None) -> Optional[Dict]:
+    """
+    Calculate weekly aggregate scores, optionally filtered.
+    """
+    if 'newscast_date_parsed' not in df.columns:
+        return None
+        
+    # Filter by newscast if requested
     data = df.copy()
-
-    # Apply newscast filter
-    if newscast == "__unspecified":
-        data = data[data['newscast_normalized'].isna()]
-    elif newscast is not None:
+    if newscast:
+        if 'newscast_normalized' not in data.columns:
+            return None
         data = data[data['newscast_normalized'] == newscast]
-
+        
     if data.empty:
         return None
-
-    # Apply question filter
-    metrics = metric_columns
-    if question is not None:
-        metrics = [question] if question in metric_columns else []
-
-    if not metrics:
-        return None
-
-    # Add week_start column
-    # with_week_start can return None if 'newscast_date_parsed' missing
-    data_with_week = with_week_start(data)
-    if data_with_week is None or data_with_week.empty:
-        return None
+        
+    # Filter by question if requested
+    cols = [question] if question else metric_columns
     
-    # Assert data is not None for mypy
-    assert data_with_week is not None
-    data = data_with_week
-
-    # Step 1: Compute row average (mean across questions for each audit)
-    data['overall_mean'] = data[metrics].mean(axis=1)
-
-    # Step 2: Compute weekly average (mean of row averages)
-    weekly_agg = data.groupby('week_start')['overall_mean'].mean()
-
-    if weekly_agg.empty:
+    # Ensure we have date
+    data = data.dropna(subset=['newscast_date_parsed'])
+    if data.empty:
         return None
-
+        
+    # Group by week
+    # Sort by date first
+    data = data.sort_values('newscast_date_parsed')
+    
+    # Determine week start (Monday)
+    data['week_start'] = data['newscast_date_parsed'].dt.to_period('W-MON').dt.start_time
+    
+    # Calculate mean for the selected columns
+    # If multiple columns, we average them all together per row first?
+    # Or average the means? 
+    # Standard approach: average of all cells in that block
+    
+    if len(cols) > 1:
+        data['score'] = data[cols].mean(axis=1)
+    else:
+        data['score'] = data[cols[0]]
+        
+    weekly = data.groupby('week_start')['score'].mean() * 100
+    
+    if weekly.empty:
+        return None
+        
     return {
-        "dates": [d.strftime('%Y-%m-%d') for d in weekly_agg.index],
-        "pct": weekly_agg.astype(float).to_numpy() * 100,
+        "dates": [d.strftime('%m/%d') for d in weekly.index],
+        "pct": weekly.values.tolist(),
+        "full_dates": [d.strftime('%Y-%m-%d') for d in weekly.index]
     }

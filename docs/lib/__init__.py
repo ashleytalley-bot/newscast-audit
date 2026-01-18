@@ -4,12 +4,9 @@ Newscast Audit Library
 Shared code for processing newscast audit survey data.
 """
 
-from .config import (
-    COLUMN_MAPPING,
-    METRIC_COLUMNS,
-    THRESHOLDS,
-    NEWSCAST_ORDER,
-    PALETTE
+from .config_dynamic import (
+    get_config,
+    initialize_config
 )
 
 from .cleaners import (
@@ -48,11 +45,8 @@ from .exceptions import (
 
 __all__ = [
     # Config
-    'COLUMN_MAPPING',
-    'METRIC_COLUMNS',
-    'THRESHOLDS',
-    'NEWSCAST_ORDER',
-    'PALETTE',
+    'get_config',
+    'initialize_config',
     # Cleaners
     'validate_input_data',
     'normalize_newscast',

@@ -14,7 +14,7 @@ import re
 import warnings
 from typing import Optional, List, Tuple, Dict
 
-from .config import COLUMN_MAPPING, METRIC_COLUMNS
+from .config_dynamic import get_config
 from .exceptions import (
     DataValidationError,
     DataQualityWarning,
@@ -39,8 +39,23 @@ def validate_input_data(df: pd.DataFrame) -> None:
         raise EmptyDataError(row_count=0)
 
     # Check for required columns
-    critical_columns = ['Which newscast are you auditing?', 'Date of newscast:']
-    missing = [col for col in critical_columns if col not in df.columns]
+    # We use the raw keys from the column mapping to verify presence
+    config = get_config()
+    required_cols = list(config.COLUMN_MAPPING.keys())
+    
+    # We only check for a subset of critical columns to be safe
+    # (e.g. sometimes comments or extra fields might be missing)
+    critical_subtext = ['Which newscast are you auditing?', 'Date of newscast:']
+    
+    missing = []
+    for crit in critical_subtext:
+        found = False
+        for col in df.columns:
+            if crit in str(col):
+                found = True
+                break
+        if not found:
+            missing.append(crit)
 
     if missing:
         raise DataValidationError(
@@ -50,96 +65,18 @@ def validate_input_data(df: pd.DataFrame) -> None:
         )
 
 
-# Newscast normalization patterns (order matters - most specific first)
-_NEWSCAST_PATTERNS = [
-    # Pattern format: (regex_pattern, output_name, description)
-
-    # Evening Plus (various formats)
-    (r'evening\s*\+|e\s*\+|evening\s+plus', 'E +', 'Evening Plus show'),
-
-    # Abbreviated formats (5a-7a, 7a-9a, etc.) - MUST come before general AM patterns
-    (r'\b5\s*a\s*[-–]\s*7\s*a\b', '5 - 7 am', '5a-7a abbreviated'),
-    (r'\b7\s*a\s*[-–]\s*9\s*a\b', '7 - 9 am', '7a-9a abbreviated'),
-
-    # "To" ranges (5 to 7am, 7 to 9am, 7 to 8am)
-    (r'5\s+to\s+7\s*(?:am|a\.m\.?)?', '5 - 7 am', '5 to 7 range'),
-    (r'7\s+to\s+[89]\s*(?:am|a\.m\.?)?', '7 - 9 am', '7 to 8/9 range'),
-
-    # Time ranges with full AM notation
-    (r'5\s*[-–:]\s*7\s*(?:am|a\.m\.)', '5 - 7 am', '5-7am range'),
-    (r'7\s*[-–:]\s*9\s*(?:am|a\.m\.)', '7 - 9 am', '7-9am range'),
-
-    # PM shows (specific times, avoiding ranges)
-    (r'\b11\s*(?:pm?|p\.m\.?)\b', '11 pm', '11 PM newscast'),
-    (r'\b11\b(?!\s*[-–:])', '11 pm', '11 (assume PM)'),
-    (r'\b6\s*(?:pm?|p\.m\.?)\b(?!\s*[-–:])', '6 pm', '6 PM newscast'),
-    (r'\b5\s*(?:pm?|p\.m\.?)\b(?!\s*[-–:])', '5 pm', '5 PM newscast'),
-    
-    # Half-hour variations (customer request: 5:30 -> 5pm)
-    (r'\b5:30\s*(?:pm?|p\.m\.?)?', '5 pm', '5:30 PM -> 5 PM'),
-    (r'\b6:30\s*(?:pm?|p\.m\.?)?', '6 pm', '6:30 PM -> 6 PM'),
-    (r'\b11:30\s*(?:pm?|p\.m\.?)?', '11 pm', '11:30 PM -> 11 PM'),
-
-    # Noon variations
-    (r'\b(?:noon|12\s*(?:pm?|p\.m\.?)|midday)\b', '12 pm', 'Noon/12pm newscast'),
-    (r'\b12\b(?!\s*[-–:])', '12 pm', '12 (assume noon)'),
-
-    # Single AM times (map to ranges)
-    (r'\b5\s*(?:am|a\.m\.?)\b(?!\s*[-–:])', '5 - 7 am', '5am (assume 5-7 range)'),
-    (r'\b7\s*(?:am|a\.m\.?)\b(?!\s*[-–:])', '7 - 9 am', '7am (assume 7-9 range)'),
-]
-
-# Ambiguous patterns that should be rejected
-_AMBIGUOUS_PATTERNS = [
-    (r'^\s*(?:am?|a\.m\.?)\s*$', 'Just "am" without time'),
-    (r'^\s*(?:pm?|p\.m\.?)\s*$', 'Just "pm" without time'),
-    (r'^\s*morning\s*$', 'Generic "morning"'),
-    (r'^\s*evening\s*$', 'Generic "evening" (use "evening+" for Evening Plus)'),
-    (r'^\s*afternoon\s*$', 'Generic "afternoon"'),
-]
-
-
 def normalize_newscast(value: Optional[str], warn_on_unknown: bool = False) -> Optional[str]:
     """
     Map free-text newscast names to standardized timeslots using regex patterns.
-
-    This function handles various input formats and normalizes them to standard
-    timeslot names. It uses pattern matching with priority ordering to handle
-    edge cases correctly.
-
-    Supported formats:
-        - Time ranges: "5-7am", "5a-7a", "5 - 7 am", "5:7am"
-        - Single times: "5am" → "5 - 7 am", "6pm" → "6 pm"
-        - Noon: "noon", "12pm", "12", "midday" → "12 pm"
-        - Numbers only: "11" → "11 pm", "12" → "12 pm"
-        - Evening Plus: "evening+", "e+", "evening plus" → "E +"
-
-    Ambiguous inputs (returned as None):
-        - Just "am" or "pm" without a time
-        - Generic words like "morning", "evening", "afternoon"
-
-    Args:
-        value: Free-text newscast name from survey response
-        warn_on_unknown: If True, emit warnings for unrecognized formats
-
-    Returns:
-        Standardized newscast name, or None if invalid/ambiguous
-
-    Examples:
-        >>> normalize_newscast("5-7am")
-        '5 - 7 am'
-        >>> normalize_newscast("6 pm")
-        '6 pm'
-        >>> normalize_newscast("noon")
-        '12 pm'
-        >>> normalize_newscast("am")  # Ambiguous
-        None
-        >>> normalize_newscast("random text")  # Unknown
-        'random text'
     """
     if pd.isna(value):
         return None
 
+    # Get patterns from dynamic config
+    config = get_config()
+    ambiguous_patterns = config.AMBIGUOUS_PATTERNS
+    normalization_patterns = config.NORMALIZATION_PATTERNS
+    
     # Clean and lowercase for matching
     original = str(value).strip()
     v = original.lower()
@@ -148,7 +85,7 @@ def normalize_newscast(value: Optional[str], warn_on_unknown: bool = False) -> O
     v = re.sub(r'\s+', ' ', v)
 
     # Check for ambiguous patterns first
-    for pattern, reason in _AMBIGUOUS_PATTERNS:
+    for pattern, reason in ambiguous_patterns:
         if re.search(pattern, v, re.IGNORECASE):
             if warn_on_unknown:
                 warnings.warn(
@@ -158,11 +95,11 @@ def normalize_newscast(value: Optional[str], warn_on_unknown: bool = False) -> O
             return None
 
     # Try to match against known patterns
-    for pattern, output, description in _NEWSCAST_PATTERNS:
+    for pattern, output, description in normalization_patterns:
         if re.search(pattern, v, re.IGNORECASE):
             return output
 
-    # Unknown format - return original value with optional warning
+    # Unknown format
     if warn_on_unknown:
         warnings.warn(
             f"Unknown newscast format '{original}'. Returning as-is. "
@@ -176,17 +113,6 @@ def normalize_newscast(value: Optional[str], warn_on_unknown: bool = False) -> O
 def convert_to_numeric(v):
     """
     Convert survey responses into 1/0/NA.
-
-    Mappings:
-    - "Yes", "Y", "True", "1" → 1
-    - "No", "N", "False", "0" → 0
-    - "N/A", "NA", "None", "" → pd.NA
-
-    Args:
-        v: Survey response value
-
-    Returns:
-        1 for yes, 0 for no, pd.NA for missing/not applicable
     """
     if pd.isna(v):
         return pd.NA
@@ -222,16 +148,11 @@ def convert_to_numeric(v):
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Rename source columns to snake_case names using COLUMN_MAPPING.
-
-    Args:
-        df: DataFrame with raw Excel column names
-
-    Returns:
-        DataFrame with standardized column names
     """
+    config = get_config()
     rename_map = {
         source: target
-        for source, target in COLUMN_MAPPING.items()
+        for source, target in config.COLUMN_MAPPING.items()
         if source in df.columns
     }
     return df.rename(columns=rename_map)
@@ -240,23 +161,9 @@ def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
 def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
     """
     Clean and prepare survey data for analysis.
-
-    This function performs the complete cleaning pipeline:
-    1. Standardize column names
-    2. Normalize newscast names
-    3. Parse dates
-    4. Convert yes/no responses to numeric
-    5. Drop rows with no metric data
-
-    Args:
-        df: Raw DataFrame from Excel
-
-    Returns:
-        Tuple of:
-        - Cleaned DataFrame
-        - List of metric column names found in the data
-        - Count of rows dropped due to missing all metrics
     """
+    config = get_config()
+    
     # Step 1: Rename columns
     df = standardize_columns(df)
 
@@ -267,21 +174,19 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
         df['newscast_normalized'] = None
 
     # Step 3: Parse dates
-    # Step 3: Parse dates
     if 'newscast_date' in df.columns:
         df['newscast_date_parsed'] = pd.to_datetime(
             df['newscast_date'],
             errors='coerce'
         )
-        # Filter out implausible past dates (e.g. 1970 epoch issues from 0 values)
-        # We assume audits are recent (>= 2020)
+        # Filter out implausible past dates
         mask_invalid_date = df['newscast_date_parsed'].dt.year < 2020
         df.loc[mask_invalid_date, 'newscast_date_parsed'] = pd.NaT
     else:
         df['newscast_date_parsed'] = pd.NaT
 
     # Step 4: Convert yes/no to numeric for present metric columns
-    present_metrics = [c for c in METRIC_COLUMNS if c in df.columns]
+    present_metrics = [c for c in config.METRIC_COLUMNS if c in df.columns]
     for col in present_metrics:
         df[col] = df[col].apply(convert_to_numeric)
         df[col] = df[col].astype('Int64')

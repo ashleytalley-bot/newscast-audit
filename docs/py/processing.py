@@ -19,10 +19,7 @@ from typing import List, Dict, Any, Optional
 
 from lib import (
     # Config
-    PALETTE,
-    THRESHOLDS,
-    NEWSCAST_ORDER,
-    METRIC_COLUMNS,
+    get_config,
     # Cleaners
     validate_input_data,
     clean_data,
@@ -98,6 +95,7 @@ def validate_and_clean_data(df_raw: pd.DataFrame, quality_tracker: DataQualityTr
         InsufficientDataError: If too many rows are dropped
     """
     initial_row_count = len(df_raw)
+    config = get_config()
 
     # Validate
     try:
@@ -133,7 +131,7 @@ def validate_and_clean_data(df_raw: pd.DataFrame, quality_tracker: DataQualityTr
     # Track unknown newscast formats
     if 'newscast_normalized' in df.columns and 'newscast' in df.columns:
         unknown_mask = (df['newscast'].notna()) & (
-            ~df['newscast_normalized'].isin(NEWSCAST_ORDER)
+            ~df['newscast_normalized'].isin(config.NEWSCAST_ORDER)
         ) & (df['newscast_normalized'].notna())
 
         if unknown_mask.any():
@@ -183,6 +181,16 @@ def process_json_data_with_errors(json_str: str) -> str:
         - Error response with detailed error information
     """
     quality_tracker = DataQualityTracker()
+    
+    # Initialize config check
+    try:
+        config = get_config()
+    except Exception as e:
+         error_response = {
+            "success": False,
+            "error": create_error_response(e)
+        }
+         return safe_json_dumps(error_response)
 
     try:
         # Parse JSON to DataFrame
@@ -208,7 +216,7 @@ def process_json_data_with_errors(json_str: str) -> str:
         if not metric_columns:
             raise DataValidationError(
                 message="No metric columns found after cleaning",
-                missing_columns=list(METRIC_COLUMNS),
+                missing_columns=list(config.METRIC_COLUMNS),
                 found_columns=list(df.columns)
             )
 
@@ -259,7 +267,7 @@ def process_json_data_with_errors(json_str: str) -> str:
                     .reset_index(name='Responses')
                 )
                 volume['Newscast'] = volume['Newscast'].fillna('Unspecified')
-                order_lookup = {name: idx for idx, name in enumerate(NEWSCAST_ORDER)}
+                order_lookup = {name: idx for idx, name in enumerate(config.NEWSCAST_ORDER)}
                 volume_df = volume.sort_values(
                     by='Newscast',
                     key=lambda x: x.map(lambda v: order_lookup.get(v, len(order_lookup)))
@@ -283,7 +291,7 @@ def process_json_data_with_errors(json_str: str) -> str:
         # Per-newscast charts
         per_newscast_charts = []
         if 'newscast_normalized' in df.columns:
-            order_lookup = {name: idx for idx, name in enumerate(NEWSCAST_ORDER)}
+            order_lookup = {name: idx for idx, name in enumerate(config.NEWSCAST_ORDER)}
             unique_newscasts = sorted(
                 [nc for nc in df['newscast_normalized'].dropna().unique()],
                 key=lambda x: order_lookup.get(x, len(order_lookup) + 1)
@@ -384,8 +392,8 @@ def process_json_data_with_errors(json_str: str) -> str:
             },
             "export_data": export_data,
             "config": {
-                "palette": PALETTE,
-                "thresholds": THRESHOLDS,
+                "palette": config.PALETTE,
+                "thresholds": config.THRESHOLDS,
                 "metric_columns": metric_columns
             },
             "quality": quality_tracker.to_dict()

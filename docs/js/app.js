@@ -187,10 +187,29 @@ class NewscastAuditApp {
             this.pyodide = await loadPyodide();
 
             this.showLoading(LOADING_MESSAGES.loadingLibs);
-            await this.pyodide.loadPackage(['pandas', 'numpy']);
+            await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml']);
 
             // Load all Python files
             await this.loadPythonFiles();
+
+            // Fetch configuration files
+            console.log("Fetching configuration files...");
+            const [stationYaml, surveyYaml, normYaml] = await Promise.all([
+                fetch('config/stations/default.yaml').then(r => r.text()),
+                fetch('config/surveys/newscast-audit-v1.yaml').then(r => r.text()),
+                fetch('config/normalization/newscast-patterns.yaml').then(r => r.text())
+            ]);
+
+            // Initialize configuration
+            console.log("Initializing configuration...");
+            this.pyodide.globals.set('station_yaml', stationYaml);
+            this.pyodide.globals.set('survey_yaml', surveyYaml);
+            this.pyodide.globals.set('norm_yaml', normYaml);
+
+            await this.pyodide.runPythonAsync(`
+                from lib.config_dynamic import initialize_config
+                initialize_config(station_yaml, survey_yaml, norm_yaml)
+            `);
 
             // Import the processing function
             await this.pyodide.runPythonAsync(`

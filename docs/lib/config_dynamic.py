@@ -1,77 +1,55 @@
 """
-Dynamic configuration loader with YAML support and fallback.
+Dynamic configuration loader with YAML support.
 
-This module provides configuration loading from YAML files when available,
-with automatic fallback to hardcoded defaults. Works in both Pyodide and
-normal Python environments.
-
-Usage:
-    from lib.config_dynamic import get_config
-
-    config = get_config()  # Loads from YAML or uses defaults
-    print(config.NEWSCAST_ORDER)
-    print(config.THRESHOLDS)
+This module is the single source of truth for configuration.
+It MUST be initialized with YAML content before use.
 """
 
 import sys
 from typing import Optional, Dict, List
 
-# Try to import YAML loader (may not be available in all environments)
-try:
-    import yaml
-    HAS_YAML = True
-except ImportError:
-    HAS_YAML = False
-
-# Import hardcoded defaults as fallback
-try:
-    from . import config as default_config
-except ImportError:
-    import config as default_config
-
+# PyYAML is required now
+import yaml
 
 class Config:
     """
-    Configuration container that can load from YAML or use defaults.
-
-    This class provides the same interface as the original config.py module,
-    but can dynamically load from YAML files when available.
+    Configuration container populated from YAML.
     """
 
     def __init__(self):
-        """Initialize with default hardcoded values."""
-        # Copy all constants from default_config
-        self.COLUMN_MAPPING = default_config.COLUMN_MAPPING.copy()
-        self.METRIC_COLUMNS = default_config.METRIC_COLUMNS.copy()
-        self.THRESHOLDS = default_config.THRESHOLDS.copy()
-        self.NEWSCAST_ORDER = default_config.NEWSCAST_ORDER.copy()
-        self.PALETTE = default_config.PALETTE.copy()
+        """Initialize empty config."""
+        self.COLUMN_MAPPING: Dict[str, str] = {}
+        self.METRIC_COLUMNS: List[str] = []
+        self.THRESHOLDS: Dict[str, int] = {}
+        self.NEWSCAST_ORDER: List[str] = []
+        self.PALETTE: Dict[str, str] = {}
+        
+        # New: Normalization patterns
+        # List of (pattern, output, description) tuples
+        self.NORMALIZATION_PATTERNS: List[tuple] = []
+        self.AMBIGUOUS_PATTERNS: List[tuple] = []
+        self.NORMALIZER_CONFIG: Dict = {}
 
-        # Track whether YAML config is loaded
         self._yaml_loaded = False
         self._station_id = 'default'
         self._survey_id = 'newscast-audit-v1'
 
-    def load_from_yaml_string(self, station_yaml: str, survey_yaml: str) -> None:
+    def load_from_yaml_string(self, station_yaml: str, survey_yaml: str, cleaning_yaml: str) -> None:
         """
         Load configuration from YAML strings.
-
-        This is the primary loading method for Pyodide environments
-        where YAML files are fetched as strings.
 
         Args:
             station_yaml: Station config YAML content
             survey_yaml: Survey config YAML content
+            cleaning_yaml: Normalization/Cleaning patterns YAML content
 
         Raises:
             ValueError: If YAML is invalid or required fields missing
         """
-        if not HAS_YAML:
-            raise RuntimeError("PyYAML not available - cannot load from YAML")
-
         try:
             station_data = yaml.safe_load(station_yaml)
             survey_data = yaml.safe_load(survey_yaml)
+            cleaning_data = yaml.safe_load(cleaning_yaml)
 
             # Extract station config
             if 'newscasts' in station_data:
@@ -92,6 +70,31 @@ class Config:
 
             if 'metrics' in survey_data:
                 self.METRIC_COLUMNS = [m['internal_name'] for m in survey_data['metrics']]
+                # Add metrics to column mapping
+                for m in survey_data['metrics']:
+                    if 'excel_column' in m and 'internal_name' in m:
+                        self.COLUMN_MAPPING[m['excel_column']] = m['internal_name']
+                
+            # Extract normalization config
+            if 'patterns' in cleaning_data:
+                 # Convert YAML list of dicts to list of tuples for the cleaner
+                 # YAML: - {pattern: '...', output: '...', description: '...'}
+                 # Tuple: (pattern, output, description)
+                 self.NORMALIZATION_PATTERNS = []
+                 for p in cleaning_data['patterns']:
+                     self.NORMALIZATION_PATTERNS.append(
+                         (p['pattern'], p['output'], p.get('description', ''))
+                     )
+            
+            if 'ambiguous_patterns' in cleaning_data:
+                self.AMBIGUOUS_PATTERNS = []
+                for p in cleaning_data['ambiguous_patterns']:
+                    self.AMBIGUOUS_PATTERNS.append(
+                        (p['pattern'], p.get('reason', ''))
+                    )
+            
+            if 'normalizer_config' in cleaning_data:
+                self.NORMALIZER_CONFIG = cleaning_data['normalizer_config']
 
             self._yaml_loaded = True
 
@@ -99,18 +102,12 @@ class Config:
             raise ValueError(f"Invalid YAML configuration: {e}")
         except KeyError as e:
             raise ValueError(f"Missing required config field: {e}")
+        except Exception as e:
+            raise ValueError(f"Configuration initialization failed: {e}")
 
     def is_yaml_loaded(self) -> bool:
         """Check if YAML configuration has been loaded."""
         return self._yaml_loaded
-
-    def get_station_id(self) -> str:
-        """Get current station ID."""
-        return self._station_id
-
-    def get_survey_id(self) -> str:
-        """Get current survey ID."""
-        return self._survey_id
 
 
 # Singleton instance
@@ -120,66 +117,24 @@ _config_instance: Optional[Config] = None
 def get_config() -> Config:
     """
     Get the global configuration instance.
-
-    Returns:
-        Config instance (creates one if doesn't exist)
-
-    Example:
-        >>> config = get_config()
-        >>> print(config.NEWSCAST_ORDER)
-        ['5 - 7 am', '7 - 9 am', ...]
+    
+    Raises:
+        RuntimeError: If config has not been initialized yet.
     """
     global _config_instance
     if _config_instance is None:
         _config_instance = Config()
+    
+    # Optional: Strictly enforce initialization
+    # if not _config_instance.is_yaml_loaded():
+    #    raise RuntimeError("Configuration not initialized! Call initialize_config() first.")
+        
     return _config_instance
 
 
-def load_config_from_yaml(station_yaml: str, survey_yaml: str) -> Config:
+def initialize_config(station_yaml: str, survey_yaml: str, cleaning_yaml: str) -> None:
     """
-    Load configuration from YAML strings and return config instance.
-
-    Args:
-        station_yaml: Station config YAML content
-        survey_yaml: Survey config YAML content
-
-    Returns:
-        Updated Config instance
-
-    Example:
-        >>> with open('config/stations/default.yaml') as f:
-        ...     station_yaml = f.read()
-        >>> with open('config/surveys/newscast-audit-v1.yaml') as f:
-        ...     survey_yaml = f.read()
-        >>> config = load_config_from_yaml(station_yaml, survey_yaml)
+    Initialize the global configuration with YAML content.
     """
     config = get_config()
-    config.load_from_yaml_string(station_yaml, survey_yaml)
-    return config
-
-
-# For backward compatibility, export the same interface as config.py
-# These will use the singleton instance
-def get_column_mapping() -> Dict[str, str]:
-    """Get column mapping (for backward compatibility)."""
-    return get_config().COLUMN_MAPPING
-
-
-def get_metric_columns() -> List[str]:
-    """Get metric columns (for backward compatibility)."""
-    return get_config().METRIC_COLUMNS
-
-
-def get_newscast_order() -> List[str]:
-    """Get newscast order (for backward compatibility)."""
-    return get_config().NEWSCAST_ORDER
-
-
-def get_thresholds() -> Dict[str, int]:
-    """Get thresholds (for backward compatibility)."""
-    return get_config().THRESHOLDS
-
-
-def get_palette() -> Dict[str, str]:
-    """Get color palette (for backward compatibility)."""
-    return get_config().PALETTE
+    config.load_from_yaml_string(station_yaml, survey_yaml, cleaning_yaml)

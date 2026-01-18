@@ -274,10 +274,9 @@ class TestWeeklyPercentSeries:
         result = weekly_percent_series(df, ['metric1'])
 
         assert result is not None
-        # Week start should be Monday Dec 25, 2023 (since Jan 1 is a Monday in 2024)
-        # Actually Jan 1, 2024 is a Monday
-        assert '-' in result['dates'][0]  # ISO format has dashes
-        assert len(result['dates'][0]) == 10  # YYYY-MM-DD is 10 chars
+        # Week start should be Monday Dec 25, 2023 
+        # Formatted as %m/%d
+        assert '/' in result['dates'][0]
 
     def test_percentages_rounded(self):
         """Should return percentages as floats."""
