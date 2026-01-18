@@ -7,7 +7,7 @@ import os
 # Add docs/py to path to import processing_with_errors
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../docs/py')))
 
-from processing_with_errors import process_json_data
+from processing import process_json_data
 
 # Valid sample data using correct MS Forms column names
 VALID_DATA = [

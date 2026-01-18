@@ -16,6 +16,7 @@ from lib.cleaners import (
     standardize_columns,
     clean_data
 )
+from lib.exceptions import DataValidationError
 
 
 class TestValidateInputData:
@@ -37,7 +38,7 @@ class TestValidateInputData:
             'Date of newscast:': ['2024-01-01'],
             'Other Column': ['data']
         })
-        with pytest.raises(ValueError, match="missing required columns"):
+        with pytest.raises(DataValidationError, match="missing required columns"):
             validate_input_data(df)
 
     def test_missing_date_column_fails(self):
@@ -46,13 +47,13 @@ class TestValidateInputData:
             'Which newscast are you auditing?': ['5-7am'],
             'Other Column': ['data']
         })
-        with pytest.raises(ValueError, match="missing required columns"):
+        with pytest.raises(DataValidationError, match="missing required columns"):
             validate_input_data(df)
 
     def test_error_message_helpful(self):
         """Should provide helpful error message with missing columns."""
         df = pd.DataFrame({'Other Column': ['data']})
-        with pytest.raises(ValueError, match="newscast audit survey export"):
+        with pytest.raises(DataValidationError, match="Excel file is missing required columns."):
             validate_input_data(df)
 
 
