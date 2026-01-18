@@ -5,7 +5,7 @@ Utility functions for processing.
 import json
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
 from .config_dynamic import get_config
 
