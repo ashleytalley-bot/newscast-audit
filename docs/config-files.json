@@ -1,0 +1,5 @@
+[
+  "config/normalization/newscast-patterns.yaml",
+  "config/stations/default.yaml",
+  "config/surveys/newscast-audit-v1.yaml"
+]

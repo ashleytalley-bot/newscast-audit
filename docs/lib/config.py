@@ -7,6 +7,13 @@ This module contains all configuration that rarely changes:
 - Performance thresholds
 - Newscast ordering
 - Color palette
+
+NOTE: These are hardcoded fallback values. For dynamic configuration
+from YAML files, use config_dynamic.py instead:
+
+    from lib.config_dynamic import get_config
+    config = get_config()
+    # Can load from YAML or uses these defaults
 """
 
 # Column mapping: Translates MS Forms Excel export column names to clean internal names

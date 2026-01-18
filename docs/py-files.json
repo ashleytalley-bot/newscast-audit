@@ -3,6 +3,7 @@
   "lib/builders.py",
   "lib/cleaners.py",
   "lib/config.py",
+  "lib/config_dynamic.py",
   "lib/exceptions.py",
   "lib/utils.py",
   "py/processing.py",
