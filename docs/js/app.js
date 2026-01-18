@@ -193,6 +193,7 @@ class NewscastAuditApp {
             await this.loadPythonFiles();
 
             // Fetch configuration files
+            // We fetch these from the web server so they can be edited without rebuilding the app
             console.log("Fetching configuration files...");
             const [stationYaml, surveyYaml, normYaml] = await Promise.all([
                 fetch('config/stations/default.yaml').then(r => r.text()),
@@ -201,6 +202,8 @@ class NewscastAuditApp {
             ]);
 
             // Initialize configuration
+            // We pass the raw YAML strings to Python because Python (PyYAML) is better 
+            // at parsing complex YAML structures than JS libraries.
             console.log("Initializing configuration...");
             this.pyodide.globals.set('station_yaml', stationYaml);
             this.pyodide.globals.set('survey_yaml', surveyYaml);
@@ -208,10 +211,11 @@ class NewscastAuditApp {
 
             await this.pyodide.runPythonAsync(`
                 from lib.config_dynamic import initialize_config
+                # Hydrate the global config object with the fetched YAMLs
                 initialize_config(station_yaml, survey_yaml, norm_yaml)
             `);
 
-            // Import the processing function
+            // Import the processing function (now that config is ready)
             await this.pyodide.runPythonAsync(`
                 from py.processing import process_json_data
             `);

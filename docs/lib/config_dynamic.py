@@ -1,14 +1,19 @@
 """
 Dynamic configuration loader with YAML support.
 
-This module is the single source of truth for configuration.
-It MUST be initialized with YAML content before use.
+This module acts as the Single Source of Truth for the application's configuration.
+Unlike the old hardcoded `config.py`, this module starts EMPTY and must be "hydrated"
+with YAML content fetched from the server.
+
+Workflow:
+1. Frontend (`app.js`) fetches .yaml files from `docs/config/`.
+2. Frontend injects these YAML strings into Python via `initialize_config()`.
+3. This module parses the YAML and populates the `Config` singleton.
+4. Other modules (`cleaners.py`, `builders.py`) call `get_config()` to access settings.
 """
 
 import sys
 from typing import Optional, Dict, List
-
-# PyYAML is required now
 import yaml
 
 class Config:

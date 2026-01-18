@@ -12,8 +12,20 @@ from .config_dynamic import get_config
 
 def clean_for_json(obj):
     """
-    Recursively clean object for JSON serialization.
-    Handles NaNs, Infinity, NumPy types, and Timestamps.
+    Recursively cleans an object to ensure it is valid JSON.
+    
+    This function is crucial for preventing frontend crashes ("JSON Parse Error")
+    by sanitizing data types that standard JSON serializers cannot handle:
+    - NaN/Infinity -> None (JSON null)
+    - pd.NA -> None (JSON null)
+    - pd.Timestamp/Period -> ISO string
+    - NumPy int/float -> Python int/float
+    
+    Args:
+        obj: Any Python object to be serialized
+        
+    Returns:
+        JSON-safe version of the object
     """
     if obj is None:
         return None
