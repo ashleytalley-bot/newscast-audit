@@ -164,7 +164,7 @@ def normalize_newscast(value: Optional[str], warn_on_unknown: bool = False) -> O
     return original
 
 
-def convert_to_numeric(v) -> pd.NA | int:
+def convert_to_numeric(v):
     """
     Convert survey responses into 1/0/NA.
 
