@@ -35,6 +35,17 @@ from .utils import (
     with_week_start
 )
 
+from .exceptions import (
+    NewscastAuditError,
+    DataValidationError,
+    DataQualityWarning,
+    ProcessingError,
+    ConfigurationError,
+    EmptyDataError,
+    InsufficientDataError,
+    create_error_response
+)
+
 __all__ = [
     # Config
     'COLUMN_MAPPING',
@@ -59,4 +70,13 @@ __all__ = [
     'sort_newscast_series',
     'color_for',
     'with_week_start',
+    # Exceptions
+    'NewscastAuditError',
+    'DataValidationError',
+    'DataQualityWarning',
+    'ProcessingError',
+    'ConfigurationError',
+    'EmptyDataError',
+    'InsufficientDataError',
+    'create_error_response',
 ]

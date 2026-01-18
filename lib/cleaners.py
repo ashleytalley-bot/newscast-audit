@@ -15,24 +15,38 @@ import warnings
 from typing import Optional, List, Tuple, Dict
 
 from .config import COLUMN_MAPPING, METRIC_COLUMNS
+from .exceptions import (
+    DataValidationError,
+    DataQualityWarning,
+    EmptyDataError,
+    InsufficientDataError
+)
 
 
 def validate_input_data(df: pd.DataFrame) -> None:
     """
-    Validate that the Excel file has expected columns.
+    Validate that the Excel file has expected columns and data.
 
     Args:
         df: Raw DataFrame from Excel file
 
     Raises:
-        ValueError: If required columns are missing
+        EmptyDataError: If DataFrame is empty
+        DataValidationError: If required columns are missing
     """
+    # Check for empty file
+    if df.empty or len(df) == 0:
+        raise EmptyDataError(row_count=0)
+
+    # Check for required columns
     critical_columns = ['Which newscast are you auditing?', 'Date of newscast:']
     missing = [col for col in critical_columns if col not in df.columns]
+
     if missing:
-        raise ValueError(
-            f"Excel file is missing required columns: {missing}\n"
-            "Ensure you're uploading a newscast audit survey export from Microsoft Forms."
+        raise DataValidationError(
+            message="Excel file is missing required columns.",
+            missing_columns=missing,
+            found_columns=list(df.columns)
         )
 
 
