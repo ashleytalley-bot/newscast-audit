@@ -74,6 +74,11 @@ _NEWSCAST_PATTERNS = [
     (r'\b11\b(?!\s*[-–:])', '11 pm', '11 (assume PM)'),
     (r'\b6\s*(?:pm?|p\.m\.?)\b(?!\s*[-–:])', '6 pm', '6 PM newscast'),
     (r'\b5\s*(?:pm?|p\.m\.?)\b(?!\s*[-–:])', '5 pm', '5 PM newscast'),
+    
+    # Half-hour variations (customer request: 5:30 -> 5pm)
+    (r'\b5:30\s*(?:pm?|p\.m\.?)?', '5 pm', '5:30 PM -> 5 PM'),
+    (r'\b6:30\s*(?:pm?|p\.m\.?)?', '6 pm', '6:30 PM -> 6 PM'),
+    (r'\b11:30\s*(?:pm?|p\.m\.?)?', '11 pm', '11:30 PM -> 11 PM'),
 
     # Noon variations
     (r'\b(?:noon|12\s*(?:pm?|p\.m\.?)|midday)\b', '12 pm', 'Noon/12pm newscast'),
