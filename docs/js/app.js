@@ -245,12 +245,30 @@ class NewscastAuditApp {
             ];
         }
 
-        // Ensure directories exist (naive approach: create lib and py)
-        // Ideally we would parse the file paths to finding unique dirs, but this is safe for now
+        // Dynamically identify all unique directories that need to be created
+        const dirs = new Set();
+        files.forEach(file => {
+            const parts = file.split('/');
+            if (parts.length > 1) {
+                // "py/pipeline/steps/clean.py" -> "py/pipeline/steps"
+                // We keep adding parents until we reach top level
+                // Actually os.makedirs creates variables parents, so we just need the deepest dir for each file
+                const dir = parts.slice(0, parts.length - 1).join('/');
+                dirs.add(dir);
+            }
+        });
+
+        const dirList = Array.from(dirs);
+        console.log("Ensuring directories exist:", dirList);
+
+        // Use Python to create directories (robust handling of existing dirs)
+        this.pyodide.globals.set('required_dirs', JSON.stringify(dirList));
         this.pyodide.runPython(`
             import os
-            os.makedirs('lib', exist_ok=True)
-            os.makedirs('py', exist_ok=True)
+            import json
+            dirs = json.loads(required_dirs)
+            for d in dirs:
+                os.makedirs(d, exist_ok=True)
         `);
 
         // Fetch and write files
