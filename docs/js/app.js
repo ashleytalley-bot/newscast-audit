@@ -57,6 +57,7 @@ class NewscastAuditApp {
      * Initialize the application
      */
     init() {
+        console.log('Newscast Audit App v2.0.1 - Deployed: 2026-01-18');
         this.setupEventListeners();
     }
 
@@ -374,7 +375,7 @@ class ChartRenderer {
      */
     createLayout(title, config, isHorizontal = false) {
         const margins = isHorizontal ? CHART_DEFAULTS.margins.perNewscast
-                                     : CHART_DEFAULTS.margins.overall;
+            : CHART_DEFAULTS.margins.overall;
         const axis = isHorizontal ? 'xaxis' : 'yaxis';
 
         const layout = {
