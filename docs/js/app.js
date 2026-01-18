@@ -148,8 +148,11 @@ class NewscastAuditApp {
                 return;
             }
 
-            // Show data quality warnings
-            if (result.quality && result.quality.warnings.length > 0) {
+            // Show data quality warnings and info
+            if (result.quality && (
+                (result.quality.warnings && result.quality.warnings.length > 0) ||
+                (result.quality.info && result.quality.info.length > 0)
+            )) {
                 errorUI.showWarnings(result.quality);
             }
 

@@ -389,14 +389,14 @@ def test_tracks_unknown_newscasts():
 
 To enable enhanced error handling:
 
-- [ ] Import error UI JavaScript in index.html
-- [ ] Import error UI CSS in index.html
-- [ ] Update processing.py to use processing_with_errors.py
-- [ ] Update app.js to use errorUI.showError() and errorUI.showWarnings()
-- [ ] Test error scenarios (empty file, missing columns, bad data)
-- [ ] Test warning display (unknown formats, invalid dates)
-- [ ] Verify mobile responsiveness of error UI
-- [ ] Add error logging/monitoring if desired
+- [x] Import error UI JavaScript in index.html
+- [x] Import error UI CSS in index.html
+- [x] Update processing.py to use processing_with_errors.py (Migrated to `Pipeline`)
+- [x] Update app.js to use errorUI.showError() and errorUI.showWarnings()
+- [x] Test error scenarios (empty file, missing columns, bad data)
+- [x] Test warning display (unknown formats, invalid dates)
+- [x] Verify mobile responsiveness of error UI
+- [x] Add error logging/monitoring if desired
 
 ## Future Enhancements
 

@@ -195,46 +195,77 @@ class ErrorUI {
     }
 
     /**
-     * Show data quality warnings
+     * Show data quality messages (warnings and info)
      */
     showWarnings(qualityData) {
-        if (!qualityData || (!qualityData.warnings || qualityData.warnings.length === 0)) {
+        if (!qualityData ||
+            ((!qualityData.warnings || qualityData.warnings.length === 0) &&
+                (!qualityData.info || qualityData.info.length === 0))) {
             this.hideWarnings();
             return;
         }
 
         let html = '<div class="warnings-card">';
-        html += `
-            <div class="warnings-header">
-                <svg class="warning-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                </svg>
-                <h4>Data Quality Warnings</h4>
-            </div>
-            <p class="warnings-intro">The data was processed successfully, but some quality issues were detected:</p>
-        `;
 
-        qualityData.warnings.forEach(warning => {
+        // Render Warnings
+        if (qualityData.warnings && qualityData.warnings.length > 0) {
             html += `
-                <div class="warning-item">
-                    <p class="warning-message">${this.escapeHtml(warning.message)}</p>
-                    ${warning.examples && warning.examples.length > 0 ? `
-                        <details class="warning-examples">
-                            <summary>Show examples (${warning.examples.length})</summary>
-                            <ul>
-                                ${warning.examples.map(ex => `<li>${this.escapeHtml(String(ex))}</li>`).join('')}
-                            </ul>
-                        </details>
-                    ` : ''}
+                <div class="warnings-header">
+                    <svg class="warning-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    <h4>Data Quality Warnings</h4>
+                </div>
+                <p class="warnings-intro">The data was processed successfully, but some quality issues were detected:</p>
+            `;
+
+            qualityData.warnings.forEach(warning => {
+                html += this.createQualityMessageHTML(warning, 'warning');
+            });
+        }
+
+        // Render Info
+        if (qualityData.info && qualityData.info.length > 0) {
+            html += `
+                <div class="info-header ${qualityData.warnings && qualityData.warnings.length > 0 ? 'mt-4' : ''}">
+                    <svg class="info-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <h4>Information</h4>
                 </div>
             `;
-        });
+
+            qualityData.info.forEach(info => {
+                html += this.createQualityMessageHTML(info, 'info');
+            });
+        }
 
         html += '</div>';
         this.warningsContainer.innerHTML = html;
         this.warningsContainer.classList.remove('hidden');
+    }
+
+    /**
+     * Create HTML for a single quality message
+     */
+    createQualityMessageHTML(data, type) {
+        return `
+            <div class="quality-item ${type}-item">
+                <p class="quality-message">${this.escapeHtml(data.message)}</p>
+                ${data.examples && data.examples.length > 0 ? `
+                    <details class="quality-examples">
+                        <summary>Show examples (${data.examples.length})</summary>
+                        <ul>
+                            ${data.examples.map(ex => `<li>${this.escapeHtml(String(ex))}</li>`).join('')}
+                        </ul>
+                    </details>
+                ` : ''}
+            </div>
+        `;
     }
 
     /**
