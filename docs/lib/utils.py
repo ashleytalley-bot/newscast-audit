@@ -10,34 +10,56 @@ from typing import List, Dict, Union, Optional
 from .config_dynamic import get_config
 
 
-class SafeJSONEncoder(json.JSONEncoder):
+def clean_for_json(obj):
     """
-    JSON Encoder that handles NaN, Infinity, and NumPy types.
+    Recursively clean object for JSON serialization.
+    Handles NaNs, Infinity, NumPy types, and Timestamps.
     """
-    def default(self, obj):
-        if isinstance(obj, float):
-            if np.isnan(obj):
-                return None
-            if np.isinf(obj):
-                return None
-        if isinstance(obj, np.integer):
-            return int(obj)
-        if isinstance(obj, np.floating):
-            return float(obj)
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()
-        if isinstance(obj, (pd.Timestamp, pd.Period)):
-            return str(obj)
-        if hasattr(obj, 'isoformat'):
-            return obj.isoformat()
-        if pd.isna(obj):
+    if obj is None:
+        return None
+    
+    # Handle floats (NaN, Inf)
+    if isinstance(obj, float):
+        if np.isnan(obj) or np.isinf(obj):
             return None
-        return super().default(obj)
+        return obj
+    
+    # Handle dictionaries
+    if isinstance(obj, dict):
+        return {k: clean_for_json(v) for k, v in obj.items()}
+    
+    # Handle lists/tuples
+    if isinstance(obj, (list, tuple)):
+        return [clean_for_json(v) for v in obj]
+        
+    # Handle NumPy types
+    if isinstance(obj, np.integer):
+        return int(obj)
+    if isinstance(obj, np.floating):
+        val = float(obj)
+        if np.isnan(val) or np.isinf(val):
+            return None
+        return val
+    if isinstance(obj, np.ndarray):
+        return [clean_for_json(v) for v in obj.tolist()]
+        
+    # Handle Pandas/Datetime types
+    if isinstance(obj, (pd.Timestamp, pd.Period)):
+        return str(obj)
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+        
+    # Handle general pd.NA / np.nan check
+    if pd.isna(obj):
+        return None
+        
+    return obj
 
 
 def safe_json_dumps(data: Union[Dict, List]) -> str:
     """Safely dump JSON handling NaNs and NumPy types."""
-    return json.dumps(data, cls=SafeJSONEncoder)
+    cleaned_data = clean_for_json(data)
+    return json.dumps(cleaned_data)
 
 
 def question_labels(metric_ids: List[str]) -> List[str]:
