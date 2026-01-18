@@ -26,6 +26,10 @@ class SafeJSONEncoder(json.JSONEncoder):
             return float(obj)
         if isinstance(obj, np.ndarray):
             return obj.tolist()
+        if isinstance(obj, (pd.Timestamp, pd.Period)):
+            return str(obj)
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
         if pd.isna(obj):
             return None
         return super().default(obj)
