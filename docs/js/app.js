@@ -460,7 +460,7 @@ export class NewscastAuditApp {
                     format: {
                         to: function (value) {
                             try {
-                                return new Date(value).toISOString().split('T')[0];
+                                return new Date(Number(value)).toISOString().split('T')[0];
                             } catch (e) {
                                 console.error("Slider Format Error:", e, "Value:", value);
                                 return "Invalid Date";
