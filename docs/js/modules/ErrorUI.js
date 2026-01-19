@@ -12,9 +12,16 @@ class ErrorUI {
       container = document.createElement("div");
       container.id = "warnings-container";
       container.className = "warnings-container hidden";
-      const resultsSection = document.getElementById("results-section");
-      if (resultsSection) {
-        resultsSection.insertBefore(container, resultsSection.firstChild);
+      // Insert after the data-quality-section (which is after comments)
+      const dataQualitySection = document.querySelector(".data-quality-section");
+      if (dataQualitySection) {
+        dataQualitySection.insertAdjacentElement('afterend', container);
+      } else {
+        // Fallback: insert at end of results-section if data-quality-section not found
+        const resultsSection = document.getElementById("results-section");
+        if (resultsSection) {
+          resultsSection.appendChild(container);
+        }
       }
     }
     return container;
