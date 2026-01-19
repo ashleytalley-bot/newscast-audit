@@ -6,11 +6,13 @@ var __publicField = (obj, key, value) => {
 };
 class PyodideService {
   constructor() {
-    __publicField(this, "pyodide", null);
+    __publicField(this, "worker", null);
     __publicField(this, "initPromise", null);
+    __publicField(this, "messageIdCounter", 0);
+    __publicField(this, "pendingMessages", /* @__PURE__ */ new Map());
   }
   /**
-   * Initialize Pyodide and load required packages.
+   * Initialize Pyodide Web Worker.
    */
   async initialize() {
     if (this.initPromise) {
@@ -19,123 +21,72 @@ class PyodideService {
     this.initPromise = this._doInitialize();
     return this.initPromise;
   }
-  async _doInitialize() {
-    if (this.pyodide) {
-      return;
-    }
-    console.log("[PyodideService] Loading Pyodide...");
-    this.pyodide = await loadPyodide({
-      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
+  _doInitialize() {
+    return new Promise((resolve, reject) => {
+      if (this.worker) {
+        resolve();
+        return;
+      }
+      console.log("[PyodideService] Initializing Worker...");
+      this.worker = new Worker("js/workers/PyodideWorker.js");
+      this.worker.onmessage = (e) => {
+        const { type, id: id2, payload, error } = e.data;
+        const pending = this.pendingMessages.get(id2);
+        if (pending) {
+          if (type === "error") {
+            pending.reject(new Error(error));
+          } else if (type === "init_complete") {
+            pending.resolve(null);
+          } else if (type === "process_complete") {
+            pending.resolve(payload);
+          }
+          this.pendingMessages.delete(id2);
+        } else if (type === "error") {
+          console.error("[PyodideService] Unhandled Worker Error:", error);
+        }
+      };
+      this.worker.onerror = (err) => {
+        console.error("Worker Script Error:", err);
+        const initPending = this.pendingMessages.get(0) || this.pendingMessages.get(1);
+        if (initPending && this.pendingMessages.size === 1) {
+          initPending.reject(err);
+        }
+      };
+      const id = this.nextId();
+      this.pendingMessages.set(id, { resolve: () => resolve(), reject });
+      const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf("/") + 1);
+      this.worker.postMessage({
+        type: "init",
+        id,
+        payload: { baseUrl }
+      });
     });
-    console.log("[PyodideService] Loading Python packages...");
-    await this.pyodide.loadPackage(["pandas", "numpy", "pyyaml", "pydantic"]);
-    console.log("[PyodideService] Loading application Python files...");
-    await this.loadPythonFiles();
-    console.log("[PyodideService] Initializing configuration...");
-    await this.initializeConfig();
   }
   /**
-   * Load Python files from the manifest using the bootstrap module.
+   * Process survey data using the Python pipeline in the worker.
    */
-  async loadPythonFiles() {
-    if (!this.pyodide) {
-      throw new Error("Pyodide not initialized");
-    }
-    console.log("[PyodideService] Bootstrapping Python environment...");
-    this.pyodide.FS.mkdir("/app");
-    this.pyodide.FS.mkdir("/app/lib");
-    try {
-      const timestamp = (/* @__PURE__ */ new Date()).getTime();
-      const response = await fetch(`lib/bootstrap.py?t=${timestamp}`);
-      if (!response.ok)
-        throw new Error(`Failed to load bootstrap.py: ${response.status}`);
-      const content = await response.text();
-      this.pyodide.FS.writeFile("/app/lib/bootstrap.py", content);
-    } catch (err) {
-      console.error("[PyodideService] Failed to load bootstrap.py:", err);
-      throw err;
-    }
-    try {
-      await this.pyodide.runPythonAsync(`
-                import sys
-                import os
-                
-                # Setup sandbox environment
-                app_root = "/app"
-                if app_root not in sys.path:
-                    sys.path.insert(0, app_root)
-                
-                # Change to app root so relative file writes land in /app
-                os.chdir(app_root)
-
-                import lib.bootstrap
-                await lib.bootstrap.install_assets('py-files.json')
-            `);
-      console.log("[PyodideService] Python environment finished bootstrapping.");
-    } catch (err) {
-      console.error("[PyodideService] Bootstrap execution failed:", err);
-      throw err;
-    }
-  }
-  /**
-   * Initialize Python configuration from YAML files.
-   */
-  async initializeConfig() {
-    if (!this.pyodide) {
-      throw new Error("Pyodide not initialized");
-    }
-    const stationYaml = await this.fetchConfig("config/stations/default.yaml");
-    const surveyYaml = await this.fetchConfig("config/surveys/newscast-audit-v1.yaml");
-    const normYaml = await this.fetchConfig("config/normalization/newscast-patterns.yaml");
-    this.pyodide.globals.set("station_yaml", stationYaml);
-    this.pyodide.globals.set("survey_yaml", surveyYaml);
-    this.pyodide.globals.set("norm_yaml", normYaml);
-    await this.pyodide.runPythonAsync(`
-            from lib.config_dynamic import initialize_config
-            initialize_config(station_yaml, survey_yaml, norm_yaml)
-            print("[Python] Configuration initialized")
-        `);
-  }
-  /**
-   * Fetch a configuration file.
-   */
-  async fetchConfig(path) {
-    const response = await fetch(path, { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`Failed to fetch ${path}: ${response.statusText}`);
-    }
-    return await response.text();
-  }
-  /**
-   * Process survey data using the Python pipeline.
-   */
-  async processData(inputData) {
-    if (!this.pyodide) {
+  async processData(inputData, options = null) {
+    if (!this.worker) {
       throw new Error("Pyodide not initialized. Call initialize() first.");
     }
-    console.log("[PyodideService] Processing data...");
-    let jsonStr;
-    if (typeof inputData === "string") {
-      jsonStr = inputData;
-    } else {
-      jsonStr = JSON.stringify(inputData);
-    }
-    this.pyodide.globals.set("input_json", jsonStr);
-    const resultJson = await this.pyodide.runPythonAsync(`
-            from py.pipeline.orchestrator import ProcessingPipeline
-            
-            pipeline = ProcessingPipeline()
-            # input_json is populated via globals.set()
-            result_json = pipeline.execute(input_json) 
-            result_json
-        `);
-    return JSON.parse(resultJson);
+    return new Promise((resolve, reject) => {
+      const id = this.nextId();
+      this.pendingMessages.set(id, { resolve, reject });
+      this.worker.postMessage({
+        type: "process",
+        id,
+        payload: { data: inputData, options }
+      });
+    });
   }
   /**
    * Check if Pyodide is initialized.
    */
   isInitialized() {
-    return this.pyodide !== null;
+    return this.worker !== null;
+  }
+  nextId() {
+    return ++this.messageIdCounter;
   }
 }
 export {

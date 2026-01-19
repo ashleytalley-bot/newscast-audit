@@ -21,6 +21,7 @@ const typeFiles = findTsFiles('docs/js/types'); // Types usually don't need comp
 
 const entryPoints = [
     'docs/js/app.ts',
+    'docs/js/workers/PyodideWorker.ts',
     ...serviceFiles,
     ...moduleFiles,
     ...typeFiles
