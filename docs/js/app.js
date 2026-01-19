@@ -93,6 +93,7 @@ export class NewscastAuditApp {
         const start = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date')).value;
         const end = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date')).value;
 
+        console.log(`Apply Filter Triggered: [${start}] to [${end}]`);
         if (!this.jsonData) return;
 
         this.showLoading('Applying filters...');
@@ -401,19 +402,6 @@ export class NewscastAuditApp {
         }
 
         if (minTimestamp && maxTimestamp) {
-            console.log("Slider Dates Debug:", {
-                minT: minTimestamp,
-                maxT: maxTimestamp,
-                minStr: new Date(minTimestamp).toISOString(),
-                maxStr: new Date(maxTimestamp).toISOString()
-            });
-
-            // Validate timestamps
-            if (isNaN(minTimestamp) || isNaN(maxTimestamp)) {
-                console.warn("Invalid dates found for slider logic");
-                return;
-            }
-
             // Handle single-date case (min == max) by adding a buffer
             if (minTimestamp === maxTimestamp) {
                 minTimestamp -= 259200000; // 3 days
@@ -435,11 +423,6 @@ export class NewscastAuditApp {
                 startTimestamp = center - (2 * DAY_MS);
                 endTimestamp = center + (2 * DAY_MS);
             }
-
-            console.log("Initializing Slider:", {
-                min: new Date(startTimestamp).toISOString(),
-                max: new Date(endTimestamp).toISOString()
-            });
 
             const slider = document.getElementById('date-slider');
 
@@ -496,6 +479,13 @@ export class NewscastAuditApp {
                         // @ts-ignore
                         endInput.value = values[1];
                     }
+                });
+
+                // Auto-apply filter when handle is released
+                // @ts-ignore
+                slider.noUiSlider.on('change', () => {
+                    console.log("Slider released. Auto-applying filter...");
+                    this.applyDateFilter();
                 });
             } catch (err) {
                 console.error("Slider creation failed:", err);

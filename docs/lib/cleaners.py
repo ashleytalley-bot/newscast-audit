@@ -180,6 +180,10 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
             errors='coerce'
         )
         
+        # Ensure naive (strips UTC if present from Excel parsing)
+        if df['newscast_date_parsed'].dt.tz is not None:
+            df['newscast_date_parsed'] = df['newscast_date_parsed'].dt.tz_localize(None)
+            
         # Filter out implausible past dates
         mask_invalid_date = df['newscast_date_parsed'].dt.year < 2020
         df.loc[mask_invalid_date, 'newscast_date_parsed'] = pd.NaT
@@ -189,6 +193,10 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
     # Fallback: Use 'start_time' if 'newscast_date' is missing/invalid
     if 'start_time' in df.columns:
         start_ts = pd.to_datetime(df['start_time'], errors='coerce')
+        # Ensure naive fallback
+        if start_ts.dt.tz is not None:
+            start_ts = start_ts.dt.tz_localize(None)
+            
         # Find rows where we have no valid newscast date BUT we do have a valid start time
         mask_fill = df['newscast_date_parsed'].isna() & start_ts.notna() & (start_ts.dt.year >= 2020)
         
