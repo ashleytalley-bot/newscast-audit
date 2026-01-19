@@ -142,7 +142,13 @@
     </footer>
 
     <script src="js/error-ui.js"></script>
-    <script src="js/app.js?v=2.2.3"></script>
+    <script type="module">
+        import { NewscastAuditApp } from './js/app.js';
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new NewscastAuditApp();
+            app.init();
+        });
+    </script>
 </body>
 
 </html>
