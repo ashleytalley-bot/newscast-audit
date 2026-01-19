@@ -261,7 +261,7 @@ export class ChartRenderer {
         };
 
         const layout = {
-            title: 'Performance Heatmap',
+            // title: 'Performance Heatmap', // Removed to avoid overlap with HTML header
             xaxis: {
                 tickangle: -30,
                 automargin: true,
@@ -273,7 +273,7 @@ export class ChartRenderer {
                 categoryorder: 'array'
             },
             margin: {
-                l: 150, r: 20, b: 50, t: 100
+                l: 150, r: 20, b: 50, t: 80 // Reduced top margin slightly as title is gone
             }
         };
 
