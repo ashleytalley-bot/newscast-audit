@@ -213,60 +213,57 @@ export class ChartRenderer {
         Plotly.newPlot(containerId, traces, layout, { responsive: CHART_DEFAULTS.responsive });
     }
 
-    /**
-     * Render heatmap of metrics vs newscasts
-     * @param {string} containerId
-     * @param {PerNewscastChart[]} perNewscastData
-     * @param {ConfigPassthrough} config
-     */
     renderHeatmap(containerId, perNewscastData, config) {
         const container = document.getElementById(containerId);
         if (!container || !perNewscastData || perNewscastData.length === 0) return;
 
-        // Find max N for opacity scaling
-        const maxN = Math.max(...perNewscastData.map(d => d.n));
-
-        // Extract all newscast names for Y-axis ordering
+        // Extract all newscast names for Y-axis ordering (Reverse for top-down)
         const allNewscasts = perNewscastData.map(d => d.newscast).reverse();
 
-        // Create one trace per newscast
-        const traces = perNewscastData.map((data, i) => {
-            // Updated: Make default much more opaque (0.75 min) so it looks "solid"
-            // Scaling is subtle (0.75 to 1.0)
-            const normalizedN = maxN > 0 ? (data.n / maxN) : 1;
-            const opacity = 0.75 + (0.25 * normalizedN);
+        // Extract all metric labels (assume consistent across newscasts, use first one)
+        const allMetrics = perNewscastData[0].labels;
 
-            return {
-                z: [data.values],
-                x: data.labels,
-                y: [data.newscast],
-                type: 'heatmap',
-                colorscale: [
-                    [0, '#d32f2f'],   // Red
-                    [0.5, '#fbc02d'], // Yellow
-                    [1, '#388e3c']    // Green
-                ],
-                zmin: 0,
-                zmax: 100,
-                opacity: opacity,
-                xgap: 1, // Slight gap for grid effect
-                ygap: 1,
-                showscale: i === 0,
-                hoverongaps: false,
-                hovertemplate:
-                    `Newscast: %{y}<br>` +
-                    `Metric: %{x}<br>` +
-                    `Yes: %{z}%<br>` +
-                    `n: ${data.n}<extra></extra>`
-            };
-        });
+        // Construct 2D array for Z values [newscast][metric]
+        // We match order of allNewscasts (reversed original data)
+        const zValues = [];
+        const customData = []; // To hold 'n' for hover
+
+        // Iterate in reverse to match allNewscasts order
+        for (let i = perNewscastData.length - 1; i >= 0; i--) {
+            const rowData = perNewscastData[i];
+            zValues.push(rowData.values);
+            // Create array of N values matching the length of values
+            customData.push(rowData.values.map(() => rowData.n));
+        }
+
+        const trace = {
+            z: zValues,
+            x: allMetrics,
+            y: allNewscasts,
+            customdata: customData,
+            type: 'heatmap',
+            colorscale: [
+                [0, '#d32f2f'],   // Red
+                [0.5, '#fbc02d'], // Yellow
+                [1, '#388e3c']    // Green
+            ],
+            zmin: 0,
+            zmax: 100,
+            xgap: 1,
+            ygap: 1,
+            hovertemplate:
+                `Newscast: %{y}<br>` +
+                `Metric: %{x}<br>` +
+                `Yes: %{z}%<br>` +
+                `n: %{customdata}<extra></extra>`
+        };
 
         const layout = {
-            title: 'Performance Heatmap (Opacity based on Sample Size)',
+            title: 'Performance Heatmap',
             xaxis: {
-                tickangle: -30, // Less steep angle
+                tickangle: -30,
                 automargin: true,
-                side: 'top' // Move labels to top for better readability
+                side: 'top'
             },
             yaxis: {
                 automargin: true,
@@ -274,17 +271,12 @@ export class ChartRenderer {
                 categoryorder: 'array'
             },
             margin: {
-                l: 150, r: 20, b: 50, t: 100 // Adjusted margins
-            },
-            // Ensure traces share the same comparison scale
-            coloraxis: {
-                cmin: 0,
-                cmax: 100
+                l: 150, r: 20, b: 50, t: 100
             }
         };
 
         // @ts-ignore
-        Plotly.newPlot(containerId, traces, layout, { responsive: CHART_DEFAULTS.responsive });
+        Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
     }
 
     /**

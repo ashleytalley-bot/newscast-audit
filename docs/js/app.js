@@ -370,6 +370,14 @@ export class NewscastAuditApp {
                 let minTimestamp = new Date(dates[0]).getTime();
                 let maxTimestamp = new Date(dates[dates.length - 1]).getTime();
 
+                console.log("Slider Dates Debug:", {
+                    rawDates: dates,
+                    minT: minTimestamp,
+                    maxT: maxTimestamp,
+                    minStr: new Date(minTimestamp).toISOString(),
+                    maxStr: new Date(maxTimestamp).toISOString()
+                });
+
                 // Validate timestamps
                 if (isNaN(minTimestamp) || isNaN(maxTimestamp)) {
                     console.warn("Invalid dates found for slider:", dates);
