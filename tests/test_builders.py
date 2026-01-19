@@ -298,3 +298,101 @@ class TestWeeklyPercentSeries:
         assert result is not None
         # Should be a percentage (0-100)
         assert 0 <= result['pct'][0] <= 100
+
+
+# --- Edge Case Tests ---
+
+class TestBuildYesPercentTableEdgeCases:
+    """Additional edge case tests for build_yes_percent_table."""
+
+    def test_single_row_dataframe(self):
+        """Should handle single-row DataFrames."""
+        df = pd.DataFrame({
+            'metric_1': [1],
+            'metric_2': [0]
+        })
+        result = build_yes_percent_table(df, ['metric_1', 'metric_2'])
+
+        assert len(result) == 2
+        assert result.loc[0, 'Yes %'] == 100  # 1/1 = 100%
+        assert result.loc[1, 'Yes %'] == 0    # 0/1 = 0%
+
+    def test_all_zeros(self):
+        """Should handle all-zero values (0% yes)."""
+        df = pd.DataFrame({
+            'metric_1': [0, 0, 0, 0]
+        })
+        result = build_yes_percent_table(df, ['metric_1'])
+
+        assert result.loc[0, 'Yes %'] == 0
+
+    def test_all_ones(self):
+        """Should handle all-one values (100% yes)."""
+        df = pd.DataFrame({
+            'metric_1': [1, 1, 1, 1]
+        })
+        result = build_yes_percent_table(df, ['metric_1'])
+
+        assert result.loc[0, 'Yes %'] == 100
+
+
+class TestWeeklyPercentSeriesEdgeCases:
+    """Additional edge case tests for weekly_percent_series."""
+
+    def test_single_week_of_data(self):
+        """Should handle single week of data (no trend)."""
+        # Data all from a single week ending Monday (W-MON grouping)
+        # Using Tuesday Jan 9 through Sunday Jan 14 = same week (ending Mon Jan 15)
+        df = pd.DataFrame({
+            'newscast_normalized': ['5 - 7 am', '5 - 7 am'],
+            'newscast_date_parsed': pd.to_datetime([
+                '2024-01-09', '2024-01-10'  # Tue-Wed, same W-MON week
+            ]),
+            'metric_1': [1, 0]
+        })
+
+        result = weekly_percent_series(df, ['metric_1'])
+
+        # Should return data even with single week
+        assert result is not None
+        # W-MON grouping may create separate buckets depending on boundaries
+        # Main test is that we get valid output without crashing
+        assert len(result['dates']) >= 1
+
+    def test_sparse_data_skips_weeks(self):
+        """Should handle sparse data with gaps between weeks."""
+        df = pd.DataFrame({
+            'newscast_normalized': ['5 - 7 am', '5 - 7 am'],
+            'newscast_date_parsed': pd.to_datetime([
+                '2024-01-01',  # Week 1
+                '2024-02-01'   # Week 5 (4 week gap)
+            ]),
+            'metric_1': [1, 0]
+        })
+
+        result = weekly_percent_series(df, ['metric_1'])
+
+        assert result is not None
+        # Should have 2 weeks (with gap weeks not filled)
+        assert len(result['dates']) == 2
+
+    def test_includes_control_limits(self):
+        """Should include P-chart control limit data."""
+        df = pd.DataFrame({
+            'newscast_normalized': ['5 - 7 am'] * 10,
+            'newscast_date_parsed': pd.to_datetime([
+                '2024-01-01', '2024-01-02', '2024-01-03',
+                '2024-01-08', '2024-01-09', '2024-01-10',
+                '2024-01-15', '2024-01-16', '2024-01-17',
+                '2024-01-22'
+            ]),
+            'metric_1': [1, 1, 0, 1, 0, 0, 1, 1, 1, 0]
+        })
+
+        result = weekly_percent_series(df, ['metric_1'])
+
+        assert result is not None
+        # Should include control limit keys
+        assert 'center_line' in result
+        assert 'ucl' in result
+        assert 'lcl' in result

@@ -391,3 +391,67 @@ class TestCleanData:
         assert 'urgency_and_why_now' in metrics
         assert 'specific_streaming_tease' in metrics
         assert len(metrics) == 2
+
+
+# --- Edge Case Tests ---
+
+class TestNormalizeNewscastEdgeCases:
+    """Additional edge case tests for newscast normalization."""
+
+    def test_special_characters_preserved(self):
+        """Should handle special characters in newscast names."""
+        # The em-dash vs hyphen variation
+        result = normalize_newscast("5 – 7 am")  # em-dash
+        assert result is not None
+        # Should normalize to standard format or return None if not recognized
+
+    def test_very_long_input(self):
+        """Should handle very long input strings."""
+        long_input = "5-7am " * 100  # Very long repeated string
+        result = normalize_newscast(long_input)
+        # Should return None or a valid result, not crash
+        assert result is None or isinstance(result, str)
+
+    def test_unicode_input(self):
+        """Should handle unicode characters."""
+        unicode_input = "6\u00a0pm"  # Non-breaking space
+        result = normalize_newscast(unicode_input)
+        # Should handle gracefully
+        assert result is None or isinstance(result, str)
+
+
+class TestConvertToNumericEdgeCases:
+    """Additional edge case tests for numeric conversion."""
+
+    def test_string_float_values(self):
+        """Should handle string representations of floats."""
+        # "0.0" and "1.0" are treated as valid 0/1 values
+        assert convert_to_numeric("0.0") == 0  # Converted to 0
+        assert convert_to_numeric("1.0") == 1  # Converted to 1
+        # Non-0/1 floats should be NA
+        assert convert_to_numeric("0.5") is pd.NA
+        assert convert_to_numeric("2.0") is pd.NA
+
+    def test_mixed_case_with_punctuation(self):
+        """Should handle unusual variations."""
+        assert convert_to_numeric("YES!") is pd.NA  # With punctuation
+        assert convert_to_numeric("no.") is pd.NA   # With period
+
+
+class TestCleanDataEdgeCases:
+    """Additional edge case tests for clean_data."""
+
+    def test_mixed_date_formats(self):
+        """Should handle mixed date formats in same column."""
+        df = pd.DataFrame({
+            'Which newscast are you auditing?': ['5-7am', '6pm'],
+            'Date of newscast:': ['2024-01-01', '01/15/2024'],  # Different formats
+            'Does each story create urgency with time relevance and active writing explaining why stories are being told right now? ': ['Yes', 'No']
+        })
+
+        cleaned_df, metrics, dropped = clean_data(df)
+
+        # Both dates should be parsed
+        assert len(cleaned_df) == 2
+        # Dates should be datetime type
+        assert pd.api.types.is_datetime64_any_dtype(cleaned_df['newscast_date_parsed'])
