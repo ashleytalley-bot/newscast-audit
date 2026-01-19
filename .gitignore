@@ -17,6 +17,11 @@ __pycache__/
 !docs/
 !docs/**
 
+# But still ignore Python cache in docs/
+docs/**/__pycache__/
+docs/**/*.pyc
+docs/**/*.pyo
+
 # Allow internal scripts and test fixtures
 !scripts/
 !scripts/**
