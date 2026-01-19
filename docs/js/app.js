@@ -71,14 +71,15 @@ export class NewscastAuditApp {
 
         // Filter buttons
         document.getElementById('btn-apply-filter').addEventListener('click', () => this.applyDateFilter());
-        document.getElementById('btn-clear-filter').addEventListener('click', () => this.clearDateFilter());
+        document.getElementById('btn-copy-comments').addEventListener('click', () => this.copyCommentsToClipboard());
     }
 
     async applyDateFilter() {
+        // Read directly from hidden inputs updated by slider
         const start = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date')).value;
         const end = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date')).value;
 
-        if (!this.jsonData) return; // Should have data if we are here
+        if (!this.jsonData) return;
 
         this.showLoading('Applying filters...');
         try {
@@ -104,12 +105,28 @@ export class NewscastAuditApp {
         }
     }
 
-    async clearDateFilter() {
-        const startInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date'));
-        const endInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date'));
-        startInput.value = '';
-        endInput.value = '';
-        this.applyDateFilter();
+    async copyCommentsToClipboard() {
+        if (!this.processedData || !this.processedData.comments) return;
+
+        const comments = this.processedData.comments;
+        if (comments.length === 0) {
+            alert("No comments to copy.");
+            return;
+        }
+
+        // Format as CSV-like text
+        const text = comments.map(c => `[${c.date}] ${c.newscast}: ${c.text}`).join('\n');
+
+        try {
+            await navigator.clipboard.writeText(text);
+            const btn = document.getElementById('btn-copy-comments');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Copied!';
+            setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+        } catch (err) {
+            console.error('Failed to copy comments: ', err);
+            alert("Failed to copy to clipboard.");
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -340,42 +357,62 @@ export class NewscastAuditApp {
     }
 
     /**
-     * Initialize date filter inputs based on data range
+     * Initialize date range slider
      * @param {ProcessingResult} result 
      */
     initializeDateFilters(result) {
-        // Find min/max dates from weekly chart data (which should cover the full range)
         // @ts-ignore
         if (result.charts && result.charts.weekly && result.charts.weekly.full_dates) {
             // @ts-ignore
             const dates = result.charts.weekly.full_dates.sort();
             if (dates.length > 0) {
-                const minDate = dates[0];
-                const maxDate = dates[dates.length - 1];
+                const minTimestamp = new Date(dates[0]).getTime();
+                const maxTimestamp = new Date(dates[dates.length - 1]).getTime();
 
-                // Store cleaned bounds
-                this.dateBounds = { min: minDate, max: maxDate };
+                const slider = document.getElementById('date-slider');
 
-                // Don't set values by default (user asked for default "all dates" but 
-                // typically inputs are blank or show placeholder. Let's leave blank 
-                // but set min/max attributes)
+                // Destroy existing slider if present
+                // @ts-ignore
+                if (slider.noUiSlider) {
+                    // @ts-ignore
+                    slider.noUiSlider.destroy();
+                }
+
+                // @ts-ignore
+                noUiSlider.create(slider, {
+                    start: [minTimestamp, maxTimestamp],
+                    connect: true,
+                    range: {
+                        'min': minTimestamp,
+                        'max': maxTimestamp
+                    },
+                    step: 86400000, // 1 day
+                    format: {
+                        to: function (value) {
+                            return new Date(value).toISOString().split('T')[0];
+                        },
+                        from: function (value) {
+                            return new Date(value).getTime();
+                        }
+                    }
+                });
+
+                const dateValues = document.getElementById('slider-values');
                 const startInput = document.getElementById('filter-start-date');
                 const endInput = document.getElementById('filter-end-date');
 
-                if (startInput && endInput) {
-                    // @ts-ignore
-                    startInput.min = minDate; // @ts-ignore
-                    startInput.max = maxDate;
-                    // @ts-ignore
-                    endInput.min = minDate;   // @ts-ignore
-                    endInput.max = maxDate;
+                // @ts-ignore
+                slider.noUiSlider.on('update', function (values, handle) {
+                    dateValues.innerHTML = `${values[0]}  —  ${values[1]}`;
 
-                    // Clear values initially
-                    // @ts-ignore
-                    startInput.value = '';
-                    // @ts-ignore
-                    endInput.value = '';
-                }
+                    if (handle === 0) {
+                        // @ts-ignore
+                        startInput.value = values[0];
+                    } else {
+                        // @ts-ignore
+                        endInput.value = values[1];
+                    }
+                });
             }
         }
     }
@@ -521,22 +558,10 @@ export class NewscastAuditApp {
                             const weeklyData = {
                                 dates: selectedData.dates,
                                 values: selectedData.values,
-                                // Assuming full_dates might be missing in filter options if not added in backend
-                                // Backend logic check: it populates 'dates' and 'values'. 
-                                // 'full_dates' is missing in filter option schema in charts.py!
-                                // We can use 'dates' as full dates if formatted, or modify backend.
-                                // Let's check backend schema.
-                                // Charts.py step (Step 463) adds 'dates' and 'values'. 
-                                // WeeklyChart schema (Step 458) expects 'full_dates'.
-                                // FilterOption schema (Step 458) has 'dates' described as "Full ISO dates".
-                                // Wait, Charts.py line 113: "dates": base_series["dates"] 
-                                // base_series is weekly_percent_series which returns 'dates' (formatted short?) or full?
-                                // Let's assume for now we might need to be careful.
-                                // Actually, renderWeeklyChart uses 'full_dates' for hover text. 
-                                // IF filter option lacks it, hover might break. 
-                                // Let's patch filter object to be compatible
-                                full_dates: selectedData.dates, // FilterOption dates are ISO strings per schema description?
-                                // Actually let's look at schema again. 
+                                full_dates: selectedData.dates, // Fallback as filter options behave like ISO strings
+                                center_line: selectedData.center_line,
+                                ucl: selectedData.ucl,
+                                lcl: selectedData.lcl
                             };
 
                             // Re-map fields if necessary. 

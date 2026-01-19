@@ -199,7 +199,7 @@ export class ChartRenderer {
         const layout = {
             title: 'Performance Heatmap (Opacity based on Sample Size)',
             xaxis: {
-                tickangle: -45,
+                tickangle: -30, // Less steep angle
                 automargin: true,
                 side: 'top' // Move labels to top for better readability
             },
@@ -209,7 +209,7 @@ export class ChartRenderer {
                 categoryorder: 'array'
             },
             margin: {
-                l: 120, r: 20, b: 50, t: 150 // Increased top margin for labels
+                l: 150, r: 20, b: 50, t: 100 // Adjusted margins
             },
             // Ensure traces share the same comparison scale
             coloraxis: {

@@ -14,7 +14,36 @@
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/PptxGenJS@3.12.0/dist/pptxgen.bundle.js"></script>
     <!-- Pyodide for Python in browser -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
+    <!-- noUiSlider for date range -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/nouislider@14.6.3/distribute/nouislider.min.js"></script>
     <link rel="stylesheet" href="css/error-ui.css">
+    <style>
+        .filter-controls {
+            flex-grow: 1;
+            margin-right: 20px;
+        }
+
+        #date-slider {
+            margin: 0 15px;
+            height: 10px;
+            display: inline-block;
+            width: 300px;
+            vertical-align: middle;
+        }
+
+        .noUi-connect {
+            background: #0d6efd;
+        }
+
+        #slider-values {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-left: 10px;
+            min-width: 150px;
+            display: inline-block;
+        }
+    </style>
 </head>
 
 <body>
@@ -68,15 +97,16 @@
             </div>
 
             <!-- Export Buttons -->
-            <div class="export-bar">
-                <div class="filter-controls d-flex align-items-center gap-2">
-                    <label class="mb-0 fw-bold text-muted small">Date Range:</label>
-                    <input type="date" id="filter-start-date" class="form-control form-control-sm" style="width: auto;">
-                    <span class="text-muted">-</span>
-                    <input type="date" id="filter-end-date" class="form-control form-control-sm" style="width: auto;">
-                    <button id="btn-apply-filter" class="btn btn-sm btn-outline-primary">Apply</button>
-                    <button id="btn-clear-filter" class="btn btn-sm btn-outline-secondary"
-                        title="Reset to all dates">×</button>
+            <div class="export-bar" style="padding: 10px 20px;">
+                <div class="filter-controls d-flex align-items-center">
+                    <label class="mb-0 fw-bold text-muted small me-2">Date Range:</label>
+                    <div id="date-slider"></div>
+                    <span id="slider-values">Loading...</span>
+                    <!-- Hidden inputs to store values for logic -->
+                    <input type="hidden" id="filter-start-date">
+                    <input type="hidden" id="filter-end-date">
+                    <button id="btn-apply-filter" class="btn btn-sm btn-outline-primary ms-3">Apply Filter</button>
+                    <!-- Clear button removed as slider handles range reset visually better or can just drag handles -->
                 </div>
 
                 <div class="export-buttons ms-auto">
@@ -166,7 +196,18 @@
             <!-- Comments Section -->
             <div class="comments-section mt-4">
                 <div class="table-card full-width">
-                    <h3>Audit Comments</h3>
+                    <div class="card-header d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="mb-0">Audit Comments</h3>
+                        <button id="btn-copy-comments" class="btn btn-sm btn-outline-primary">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="me-1">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                            </svg>
+                            Copy for AI
+                        </button>
+                    </div>
                     <div id="comments-feed"></div>
                 </div>
             </div>
