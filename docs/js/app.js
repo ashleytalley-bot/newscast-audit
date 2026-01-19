@@ -3,6 +3,7 @@ import { LOADING_MESSAGES } from './modules/config.js';
 import { ChartRenderer } from './modules/ChartRenderer.js';
 import { TableRenderer } from './modules/TableRenderer.js';
 import { DataExporter } from './modules/DataExporter.js';
+import { CommentRenderer } from './modules/CommentRenderer.js';
 
 /**
  * @typedef {import('./types').ProcessingResult} ProcessingResult
@@ -38,6 +39,7 @@ export class NewscastAuditApp {
 
         this.chartRenderer = new ChartRenderer();
         this.tableRenderer = new TableRenderer();
+        this.commentRenderer = new CommentRenderer();
         this.exporter = new DataExporter();
     }
 
@@ -386,11 +388,33 @@ export class NewscastAuditApp {
         const charts = this.processedData.charts;
         const config = this.processedData.config;
 
-        // Overall chart
+        // Render Charts
         this.chartRenderer.renderOverallChart('chart-overall', charts.overall, config);
-
-        // Per-newscast charts
         this.chartRenderer.renderPerNewscastCharts('charts-per-newscast', charts.per_newscast, config);
+
+        // Render Weekly Chart (New)
+        if (charts.weekly) {
+            this.chartRenderer.renderWeeklyChart('chart-weekly', charts.weekly, config);
+        }
+
+        // Render Heatmap (New)
+        // Only if per_newscast data exists
+        if (charts.per_newscast && charts.per_newscast.length > 0) {
+            this.chartRenderer.renderHeatmap('chart-heatmap', charts.per_newscast, config);
+        }
+
+        // Render Tables
+        // We use the generic render method for tables
+        this.tableRenderer.render('table-overall', this.processedData.tables.overall, ['Question', 'Yes %'], config);
+        this.tableRenderer.render('table-quality', this.processedData.tables.data_quality, ['Question', 'Complete %', 'Missing'], config);
+        this.tableRenderer.render('table-volume', this.processedData.tables.volume, ['Newscast', 'Responses'], config);
+
+        // Render Comments (New)
+        // @ts-ignore
+        if (this.processedData.comments) {
+            // @ts-ignore
+            this.commentRenderer.renderComments('comments-feed', this.processedData.comments);
+        }
     }
 
     // ═══════════════════════════════════════════════════════════════════════

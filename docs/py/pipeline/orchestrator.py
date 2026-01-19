@@ -199,6 +199,7 @@ class ProcessingPipeline:
                 "thresholds": get_config().THRESHOLDS,
                 "metric_columns": metric_columns
             },
+            "comments": context.get('comments', []),
             "quality": context.quality_tracker.to_dict()
         }
 

@@ -118,7 +118,38 @@ class AggregationStep(PipelineStep):
                     examples=[str(e)]
                 )
 
-        # Update context with tables
+        # Extract comments
+        comments = []
+        if 'additional_comments' in df.columns:
+            # Filter for non-empty comments
+            comments_df = df[df['additional_comments'].notna() & (df['additional_comments'] != '')].copy()
+            
+            # Sort by date (descending) if possible
+            if 'newscast_date' in comments_df.columns:
+                # Convert to datetime if needed for sorting (though pipeline likely handled it)
+                # Just robustly sort
+                comments_df['sort_date'] = pd.to_datetime(comments_df['newscast_date'], errors='coerce')
+                comments_df = comments_df.sort_values('sort_date', ascending=False)
+            
+            for _, row in comments_df.iterrows():
+                # Format date
+                date_str = "Unknown Date"
+                if 'newscast_date' in row and pd.notna(row['newscast_date']):
+                    ts = pd.to_datetime(row['newscast_date'])
+                    date_str = ts.strftime('%B %d, %Y')
+                
+                # Format newscast
+                newscast_str = row.get('newscast_normalized', 'Unknown Newscast')
+                if pd.isna(newscast_str):
+                    newscast_str = "Unknown Newscast"
+
+                comments.append({
+                    "date": date_str,
+                    "newscast": newscast_str,
+                    "text": str(row['additional_comments'])
+                })
+
+        # Update context with tables and comments
         context.set('tables', {
             'overall': overall_df,
             'data_quality': data_quality_df,
@@ -126,5 +157,6 @@ class AggregationStep(PipelineStep):
             'recent_week_start': recent_week_start,
             'volume': volume_df
         })
+        context.set('comments', comments)
 
         return context

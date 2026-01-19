@@ -108,6 +108,101 @@ export class ChartRenderer {
     }
 
     /**
+     * Render weekly trend chart
+     * @param {string} containerId 
+     * @param {import('../types').WeeklyChart} weeklyData 
+     * @param {ConfigPassthrough} config 
+     */
+    renderWeeklyChart(containerId, weeklyData, config) {
+        const container = document.getElementById(containerId);
+        if (!container || !weeklyData) return;
+
+        const trace = {
+            x: weeklyData.dates,
+            y: weeklyData.values,
+            type: 'scatter',
+            mode: 'lines+markers',
+            line: {
+                color: config.palette.primary,
+                width: 3,
+                shape: 'spline'
+            },
+            marker: { size: 8 },
+            text: weeklyData.full_dates,
+            hovertemplate: 'Week of %{text}: %{y}%<extra></extra>'
+        };
+
+        const layout = {
+            title: 'Weekly Performance Trend',
+            yaxis: {
+                title: 'Percent Yes',
+                range: CHART_DEFAULTS.axisRange,
+                ticksuffix: '%'
+            },
+            margin: CHART_DEFAULTS.margins.overall,
+            font: {
+                family: CHART_DEFAULTS.fonts.family,
+                color: config.palette.primary
+            }
+        };
+
+        // @ts-ignore
+        Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+    }
+
+    /**
+     * Render heatmap of metrics vs newscasts
+     * @param {string} containerId
+     * @param {PerNewscastChart[]} perNewscastData
+     * @param {ConfigPassthrough} config
+     */
+    renderHeatmap(containerId, perNewscastData, config) {
+        const container = document.getElementById(containerId);
+        if (!container || !perNewscastData || perNewscastData.length === 0) return;
+
+        // X-axis: Metrics (Labels)
+        // Y-axis: Newscasts
+        // Z-axis: Values (Scores)
+
+        // Assuming all newscasts have same metrics in same order
+        const metrics = perNewscastData[0].labels;
+        const newscasts = perNewscastData.map(d => d.newscast);
+        const zValues = perNewscastData.map(d => d.values);
+
+        const data = [{
+            z: zValues,
+            x: metrics,
+            y: newscasts,
+            type: 'heatmap',
+            colorscale: [
+                [0, '#d32f2f'],   // Red for low
+                [0.5, '#fbc02d'], // Yellow for mid
+                [1, '#388e3c']    // Green for high
+            ],
+            zmin: 0,
+            zmax: 100,
+            hoverongaps: false
+        }];
+
+        const layout = {
+            title: 'Performance Heatmap',
+            xaxis: {
+                tickangle: -45,
+                automargin: true
+            },
+            yaxis: {
+                automargin: true
+            },
+            margin: {
+                l: 100, r: 20, b: 100, t: 50
+            }
+        };
+
+        // @ts-ignore
+        Plotly.newPlot(containerId, data, layout, { responsive: CHART_DEFAULTS.responsive });
+    }
+
+    /**
      * Capture chart as image (for PowerPoint export)
      * @param {string} elementId 
      * @param {number} [width=800] 

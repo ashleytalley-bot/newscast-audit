@@ -13,12 +13,14 @@ in processing.py (lines ~274-348).
 
 import sys
 from pathlib import Path
+from typing import Optional
 import pandas as pd
 
 
 from lib.config_dynamic import get_config
 from lib.utils import question_labels, color_for, with_week_start, sort_newscast_series
 from lib.builders import weekly_percent_series
+from lib.schemas.output import WeeklyChart
 from ..base import PipelineStep, PipelineContext
 
 
@@ -38,6 +40,10 @@ class ChartGenerationStep(PipelineStep):
     @property
     def name(self) -> str:
         return "Chart Generation"
+    
+    @property
+    def config(self):
+        return get_config()
 
     def execute(self, context: PipelineContext) -> PipelineContext:
         """
@@ -85,18 +91,17 @@ class ChartGenerationStep(PipelineStep):
                     "n": len(sub)
                 })
 
-        # Weekly trend chart: overall performance over time
-        weekly_chart = None
-        df_week = with_week_start(df)
-        if df_week is not None:
-            df_week['overall_mean'] = df_week[metric_columns].mean(axis=1)
-            weekly_agg = df_week.groupby('week_start')['overall_mean'].mean() * 100
-            if not weekly_agg.empty:
-                weekly_chart = {
-                    "dates": [d.strftime('%m/%d') for d in weekly_agg.index],
-                    "values": [round(v, 1) if pd.notna(v) else None for v in weekly_agg.values],
-                    "full_dates": [d.strftime('%Y-%m-%d') for d in weekly_agg.index]
-                }
+        # Weekly trend chart
+        weekly_chart = self._generate_weekly_chart(df)
+        if weekly_chart:
+            # Convert Pydantic model to dict for consistency with other charts
+            # (or context expects dicts? The schema calls for WeeklyChart model eventually)
+            # The context stores dicts usually, but Orchestrator converts to Pydantic.
+            # Let's keep it as dict representation for now to minimize friction
+            weekly_chart_dict = weekly_chart.model_dump()
+        else:
+             weekly_chart_dict = None
+
 
         # Interactive filter options for weekly trends
         filter_options = []
@@ -138,8 +143,58 @@ class ChartGenerationStep(PipelineStep):
         context.set('charts', {
             'overall': overall_chart,
             'per_newscast': per_newscast_charts,
-            'weekly': weekly_chart,
+            'weekly': weekly_chart_dict,
             'filter_options': filter_options
         })
 
         return context
+
+    def _generate_weekly_chart(self, df: pd.DataFrame) -> Optional[WeeklyChart]:
+        """Generate weekly trend data."""
+        if df.empty or 'newscast_date' not in df.columns:
+            return None
+
+        # Ensure date column is datetime
+        if not pd.api.types.is_datetime64_any_dtype(df['newscast_date']):
+            # Attempt to convert if not already datetime
+            try:
+                df['newscast_date'] = pd.to_datetime(df['newscast_date'])
+            except Exception:
+                return None
+
+        # Resample by week (starting Monday)
+        # We use 'W-MON' frequency
+        weekly = df.set_index('newscast_date').sort_index()
+        
+        # Calculate weekly average of all metrics
+        # First, ensure we only numeric columns
+        metric_cols = [c for c in self.config.METRIC_COLUMNS if c in df.columns]
+        if not metric_cols:
+            return None
+            
+        weekly_metrics = weekly[metric_cols].resample('W-MON').mean() * 100
+        
+        # Calculate overall weekly average (mean of means)
+        weekly_overall = weekly_metrics.mean(axis=1)
+        
+        # Drop weeks with no data (NaN)
+        weekly_overall = weekly_overall.dropna()
+        
+        if weekly_overall.empty:
+            return None
+
+        # Ensure index is treated as DatetimeIndex for strftime
+        dt_index = pd.DatetimeIndex(weekly_overall.index)
+        dates = dt_index.strftime('%m/%d').tolist()
+        full_dates = dt_index.strftime('%Y-%m-%d').tolist()
+        values = weekly_overall.values.tolist()
+        
+        # Round values
+        values = [round(v, 1) for v in values]
+
+        return WeeklyChart(
+            dates=dates,
+            values=values,
+            full_dates=full_dates
+        )
+

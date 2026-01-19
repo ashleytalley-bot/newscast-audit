@@ -249,6 +249,14 @@ class ConfigPassthrough(BaseModel):
     )
 
 
+class Comment(BaseModel):
+    """A single user comment from the audit."""
+
+    date: str = Field(description="Date of the newscast")
+    newscast: str = Field(description="Newscast audited")
+    text: str = Field(description="The comment text")
+
+
 class ProcessingResult(BaseModel):
     """Successful processing result - the main output contract."""
 
@@ -264,6 +272,10 @@ class ProcessingResult(BaseModel):
     )
     charts: ChartsCollection = Field(
         description="All chart data"
+    )
+    comments: List[Comment] = Field(
+        default_factory=list,
+        description="List of all additional comments"
     )
     export_data: ExportData = Field(
         description="Data for export functionality"
