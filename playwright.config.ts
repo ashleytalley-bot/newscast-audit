@@ -18,7 +18,7 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: 'npx http-server docs -p 8080',
+        command: 'npx cross-env NODE_OPTIONS="--no-deprecation" http-server docs -p 8080',
         url: 'http://127.0.0.1:8080',
         reuseExistingServer: !process.env.CI,
         timeout: 120 * 1000,
