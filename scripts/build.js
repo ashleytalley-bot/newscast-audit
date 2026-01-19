@@ -1,9 +1,16 @@
 import esbuild from 'esbuild';
-// glob removed
-// Actually, let's just list the files or use a simple directory scan since we don't want to add too many dependencies if possible.
-// Or just use fs.readdir.
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
+
+// Compute MD5 hash of file contents for cache-busting
+function computeFileHash(filepath) {
+    if (!fs.existsSync(filepath)) {
+        return 'missing';
+    }
+    const content = fs.readFileSync(filepath);
+    return crypto.createHash('md5').update(content).digest('hex').substring(0, 8);
+}
 
 // Simple directory scan for .ts files in specific directories
 function findTsFiles(dir) {
@@ -81,6 +88,29 @@ async function build() {
         const configFiles = getFilesRecursive(path.join(docsDir, 'config'), /\.yaml$/, docsDir).sort();
         fs.writeFileSync(path.join(docsDir, 'config-files.json'), JSON.stringify(configFiles, null, 2));
         console.log(`✓ Generated config-files.json (${configFiles.length} files)`);
+
+        // Generate asset manifest with content hashes for cache-busting
+        console.log('Generating asset manifest with content hashes...');
+        const assetManifest = {
+            // JavaScript files
+            'js/app.js': computeFileHash('docs/js/app.js'),
+
+            // Python manifests (dynamic)
+            'py-files.json': computeFileHash('docs/py-files.json'),
+            'config-files.json': computeFileHash('docs/config-files.json'),
+
+            // Config YAML files (add hashes for all configs)
+            ...configFiles.reduce((acc, file) => {
+                acc[file] = computeFileHash(path.join(docsDir, file));
+                return acc;
+            }, {})
+        };
+
+        fs.writeFileSync(
+            path.join(docsDir, 'asset-manifest.json'),
+            JSON.stringify(assetManifest, null, 2)
+        );
+        console.log(`✓ Generated asset-manifest.json (${Object.keys(assetManifest).length} assets)`);
 
         console.log('⚡ Build complete!');
     } catch (error) {

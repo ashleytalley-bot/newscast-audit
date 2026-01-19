@@ -96,8 +96,17 @@ class ProcessingPipeline:
                     original_error=e
                 )
 
-            # Create pipeline context
-            context = PipelineContext(df_raw, tracker=quality_tracker, options=options)
+            # Load timezone from config
+            config = get_config()
+            timezone = config.STATION_TIMEZONE
+
+            # Create pipeline context with timezone
+            context = PipelineContext(
+                df_raw,
+                tracker=quality_tracker,
+                options=options,
+                timezone=timezone
+            )
 
             # Execute each step in sequence
             for step in self.steps:

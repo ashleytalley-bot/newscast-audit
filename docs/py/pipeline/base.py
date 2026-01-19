@@ -25,9 +25,16 @@ class PipelineContext:
         metadata: Dictionary of step outputs and intermediate results
         quality_tracker: Tracks data quality warnings and info
         options: Configuration options like date range filters
+        timezone: Station timezone for date operations (e.g., "America/New_York")
     """
 
-    def __init__(self, data: pd.DataFrame, tracker: Optional[DataQualityTracker] = None, options: Optional[Dict[str, Any]] = None):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        tracker: Optional[DataQualityTracker] = None,
+        options: Optional[Dict[str, Any]] = None,
+        timezone: Optional[str] = None
+    ):
         """
         Initialize pipeline context.
 
@@ -35,12 +42,14 @@ class PipelineContext:
             data: Initial DataFrame to process
             tracker: Optional tracker, creates new one if None
             options: Optional runtime configuration
+            timezone: Station timezone (e.g., "America/New_York")
         """
         self.data = data
         self.full_data: Optional[pd.DataFrame] = None
         self.metadata: Dict[str, Any] = {}
         self.quality_tracker = tracker if tracker is not None else DataQualityTracker()
         self.options = options or {}
+        self.timezone = timezone  # Now available to all pipeline steps
 
     def set(self, key: str, value: Any) -> None:
         """Store a value in the context."""

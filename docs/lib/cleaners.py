@@ -21,6 +21,7 @@ from .exceptions import (
     EmptyDataError,
     InsufficientDataError
 )
+from .datetime_utils import parse_date_column
 
 
 def validate_input_data(df: pd.DataFrame) -> None:
@@ -173,36 +174,19 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
     else:
         df['newscast_normalized'] = None
 
-    # Step 3: Parse dates
+    # Step 3: Parse dates using centralized datetime utilities
+    # This consolidates the scattered date parsing logic and handles:
+    # - Timezone-naive dates (as expected from Excel)
+    # - Fallback from newscast_date to start_time
+    # - Validation of plausible date ranges (2020-2030)
     if 'newscast_date' in df.columns:
-        df['newscast_date_parsed'] = pd.to_datetime(
+        fallback_series = df.get('start_time', None)
+        df['newscast_date_parsed'] = parse_date_column(
             df['newscast_date'],
-            errors='coerce'
+            fallback_series=fallback_series
         )
-        
-        # Ensure naive (strips UTC if present from Excel parsing)
-        if df['newscast_date_parsed'].dt.tz is not None:
-            df['newscast_date_parsed'] = df['newscast_date_parsed'].dt.tz_localize(None)
-            
-        # Filter out implausible past dates
-        mask_invalid_date = df['newscast_date_parsed'].dt.year < 2020
-        df.loc[mask_invalid_date, 'newscast_date_parsed'] = pd.NaT
     else:
         df['newscast_date_parsed'] = pd.NaT
-
-    # Fallback: Use 'start_time' if 'newscast_date' is missing/invalid
-    if 'start_time' in df.columns:
-        start_ts = pd.to_datetime(df['start_time'], errors='coerce')
-        # Ensure naive fallback
-        if start_ts.dt.tz is not None:
-            start_ts = start_ts.dt.tz_localize(None)
-            
-        # Find rows where we have no valid newscast date BUT we do have a valid start time
-        mask_fill = df['newscast_date_parsed'].isna() & start_ts.notna() & (start_ts.dt.year >= 2020)
-        
-        if mask_fill.any():
-            # Use the date component of start_time
-            df.loc[mask_fill, 'newscast_date_parsed'] = start_ts[mask_fill].dt.floor('D')
 
 
     # Step 4: Convert yes/no to numeric for present metric columns

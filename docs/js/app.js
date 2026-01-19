@@ -3,6 +3,7 @@ import { ChartRenderer } from "./modules/ChartRenderer.js";
 import { TableRenderer } from "./modules/TableRenderer.js";
 import { DataExporter } from "./modules/DataExporter.js";
 import { CommentRenderer } from "./modules/CommentRenderer.js";
+import { DateSlider } from "./modules/DateSlider.js";
 import { PyodideService } from "./services/PyodideService.js";
 import { errorUI } from "./modules/ErrorUI.js";
 class NewscastAuditApp {
@@ -10,7 +11,7 @@ class NewscastAuditApp {
     this.processedData = null;
     this.jsonData = null;
     // Raw Excel data
-    this.isInitializingSlider = false;
+    this.dateSlider = null;
     console.log("NewscastAuditApp constructor called");
     this.pyodideService = new PyodideService();
     this.dom = {
@@ -117,96 +118,28 @@ class NewscastAuditApp {
     }
   }
   /**
-   * Initialize date range slider
+   * Initialize date range slider using the DateSlider module.
+   *
+   * This replaces the previous 114-line inline implementation with a clean,
+   * testable class that uses centralized DateUtils for all date math.
    */
   initializeDateFilters(result) {
-    let minTimestamp;
-    let maxTimestamp;
-    let pChartDates = [];
-    if (result.charts?.date_range && result.charts.date_range.min && result.charts.date_range.max) {
-      minTimestamp = new Date(result.charts.date_range.min).getTime();
-      maxTimestamp = new Date(result.charts.date_range.max).getTime();
-      console.log("Using raw daily date range:", result.charts.date_range);
-    } else if (result.charts?.weekly?.full_dates) {
-      pChartDates = result.charts.weekly.full_dates.sort();
-      if (pChartDates.length > 0) {
-        minTimestamp = new Date(pChartDates[0]).getTime();
-        maxTimestamp = new Date(pChartDates[pChartDates.length - 1]).getTime();
-      }
-    }
-    if (minTimestamp && maxTimestamp) {
-      const minDateObj = new Date(minTimestamp);
-      const minDate = Date.UTC(minDateObj.getUTCFullYear(), minDateObj.getUTCMonth(), minDateObj.getUTCDate());
-      const maxDateObj = new Date(maxTimestamp);
-      const maxDate = Date.UTC(maxDateObj.getUTCFullYear(), maxDateObj.getUTCMonth(), maxDateObj.getUTCDate());
-      const DAY_MS = 864e5;
-      const totalDays = Math.round((maxDate - minDate) / DAY_MS);
-      console.log("Slider Setup (UTC):", {
-        minDateStr: new Date(minDate).toISOString().split("T")[0],
-        maxDateStr: new Date(maxDate).toISOString().split("T")[0],
-        totalDays
-      });
-      const slider = document.getElementById("date-slider");
-      const startInput = document.getElementById("filter-start-date");
-      const endInput = document.getElementById("filter-end-date");
-      if (!slider)
-        return;
-      let dayStart = 0;
-      let dayEnd = totalDays;
-      if (startInput && startInput.value && endInput && endInput.value) {
-        const sDate = new Date(startInput.value);
-        const curStart = Date.UTC(sDate.getUTCFullYear(), sDate.getUTCMonth(), sDate.getUTCDate());
-        const eDate = new Date(endInput.value);
-        const curEnd = Date.UTC(eDate.getUTCFullYear(), eDate.getUTCMonth(), eDate.getUTCDate());
-        if (!isNaN(curStart) && !isNaN(curEnd)) {
-          dayStart = Math.max(0, Math.round((curStart - minDate) / DAY_MS));
-          dayEnd = Math.min(totalDays, Math.round((curEnd - minDate) / DAY_MS));
-        }
-      }
-      if (slider.noUiSlider) {
-        slider.noUiSlider.destroy();
-      }
-      this.isInitializingSlider = true;
-      try {
-        noUiSlider.create(slider, {
-          start: [dayStart, dayEnd],
-          connect: true,
-          behaviour: "drag-tap",
-          range: {
-            "min": 0,
-            "max": totalDays
-          },
-          step: 1
-        });
-        const dateValues = document.getElementById("slider-values");
-        slider.noUiSlider.on("update", (values, handle) => {
-          const startDay = Math.round(Number(values[0]));
-          const endDay = Math.round(Number(values[1]));
-          const dStart = new Date(minDate + startDay * DAY_MS).toISOString().split("T")[0];
-          const dEnd = new Date(minDate + endDay * DAY_MS).toISOString().split("T")[0];
-          if (dateValues)
-            dateValues.innerHTML = `${dStart}  \u2014  ${dEnd}`;
-          if (handle === 0 && startInput)
-            startInput.value = dStart;
-          else if (endInput)
-            endInput.value = dEnd;
-        });
-        slider.noUiSlider.on("change", () => {
-          if (this.isInitializingSlider) {
-            console.log("Slider changed during init. Skipping auto-filter.");
-            return;
+    try {
+      this.dateSlider = new DateSlider(
+        "date-slider",
+        "filter-start-date",
+        "filter-end-date",
+        "slider-values",
+        {
+          onChange: (start, end) => {
+            console.log(`Date filter changed: ${start} to ${end}`);
+            this.applyDateFilter();
           }
-          console.log("Slider released. Auto-applying filter...");
-          this.applyDateFilter();
-        });
-        setTimeout(() => {
-          this.isInitializingSlider = false;
-          console.log("Slider initialization complete.");
-        }, 100);
-      } catch (err) {
-        console.error("Slider creation failed:", err);
-        this.isInitializingSlider = false;
-      }
+        }
+      );
+      this.dateSlider.initialize(result);
+    } catch (err) {
+      console.error("Failed to initialize date slider:", err);
     }
   }
   // ═══════════════════════════════════════════════════════════════════════

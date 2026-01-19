@@ -28,12 +28,15 @@ class Config:
         self.THRESHOLDS: Dict[str, int] = {}
         self.NEWSCAST_ORDER: List[str] = []
         self.PALETTE: Dict[str, str] = {}
-        
+
         # New: Normalization patterns
         # List of (pattern, output, description) tuples
         self.NORMALIZATION_PATTERNS: List[Tuple[str, str, str]] = []
         self.AMBIGUOUS_PATTERNS: List[Tuple[str, str]] = []
         self.NORMALIZER_CONFIG: Dict = {}
+
+        # Station timezone for date operations
+        self.STATION_TIMEZONE: str = "America/New_York"  # Default to Eastern
 
         self._yaml_loaded = False
         self._station_id = 'default'
@@ -57,6 +60,9 @@ class Config:
             cleaning_data = yaml.safe_load(cleaning_yaml)
 
             # Extract station config
+            if 'station' in station_data and 'timezone' in station_data['station']:
+                self.STATION_TIMEZONE = station_data['station']['timezone']
+
             if 'newscasts' in station_data:
                 self.NEWSCAST_ORDER = [nc['label'] for nc in station_data['newscasts']]
 

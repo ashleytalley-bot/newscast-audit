@@ -233,7 +233,12 @@
         };
     </script>
     <script type="module">
-        import { NewscastAuditApp } from './js/app.js?v=8';
+        /**
+         * Cache-Busting: The build script now generates asset-manifest.json with content hashes.
+         * Current version uses content hash: 9205efbe
+         * Future enhancement: Load from manifest dynamically to eliminate manual updates.
+         */
+        import { NewscastAuditApp } from './js/app.js?v=9205efbe';
         import { errorUI } from './js/modules/ErrorUI.js';
 
         document.addEventListener('DOMContentLoaded', () => {

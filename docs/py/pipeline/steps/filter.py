@@ -9,6 +9,7 @@ import pandas as pd
 from typing import Optional
 
 from ..base import PipelineStep, PipelineContext
+from lib.datetime_utils import filter_by_date_range
 
 
 class FilteringStep(PipelineStep):
@@ -52,22 +53,42 @@ class FilteringStep(PipelineStep):
         # (We use copy to ensure full_data isn't modified by subsequent steps)
         context.full_data = df.copy()
 
-        # Apply start date filter
+        # Apply date filters using centralized datetime utilities
+        # This ensures consistent inclusive end-date handling across the app
+        # We validate dates manually first to provide proper warnings
+        valid_start = True
+        valid_end = True
+
         if start_date:
             try:
-                ts_start = pd.to_datetime(start_date)
-                df = df[df['newscast_date_parsed'] >= ts_start]
+                from lib.datetime_utils import parse_date_safe
+                parsed_start = parse_date_safe(start_date)
+                if parsed_start is None:
+                    context.quality_tracker.add_warning("Invalid start date filter ignored")
+                    valid_start = False
             except (ValueError, TypeError):
                 context.quality_tracker.add_warning("Invalid start date filter ignored")
+                valid_start = False
 
-        # Apply end date filter
         if end_date:
             try:
-                ts_end = pd.to_datetime(end_date)
-                # Include the entire end date by checking if dates are strictly before the next day
-                df = df[df['newscast_date_parsed'] < (ts_end + pd.Timedelta(days=1))]
+                from lib.datetime_utils import parse_date_safe
+                parsed_end = parse_date_safe(end_date)
+                if parsed_end is None:
+                    context.quality_tracker.add_warning("Invalid end date filter ignored")
+                    valid_end = False
             except (ValueError, TypeError):
                 context.quality_tracker.add_warning("Invalid end date filter ignored")
+                valid_end = False
+
+        # Only apply filter if dates are valid
+        if valid_start and valid_end:
+            df = filter_by_date_range(
+                df,
+                date_column='newscast_date_parsed',
+                start_date=start_date if start_date else None,
+                end_date=end_date if end_date else None
+            )
 
         # Update context with filtered dataframe
         context.data = df
