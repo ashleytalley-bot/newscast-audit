@@ -358,7 +358,7 @@ export class NewscastAuditApp {
         for (const file of files) {
             try {
                 // Add cache busting to ensure fresh code is loaded
-                const response = await fetch(file, { cache: 'no-store' });
+                const response = await fetch(`${file}?t=${new Date().getTime()}`);
                 if (!response.ok) throw new Error(`Failed to load ${file}`);
                 const content = await response.text();
                 // Ensure parent directory exists for nested files inside sub-sub-folders if any
