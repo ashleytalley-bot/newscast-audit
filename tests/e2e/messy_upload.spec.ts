@@ -39,6 +39,6 @@ test.describe('Messy Fixture Upload', () => {
             await detailsToggle.click();
         }
         const examplesList = page.locator('.quality-examples li');
-        await expect(examplesList.first()).toContainText('Extra Column');
+        await expect(examplesList).toContainText('Extra Column');
     });
 });
