@@ -487,7 +487,6 @@ export class NewscastAuditApp {
             }
         }
     }
-}
 
     /**
      * Process the data using the Python pipeline
@@ -496,187 +495,187 @@ export class NewscastAuditApp {
      * @returns {Promise<ProcessingOutput>} The processing result or error response
      */
     async processDataWithPython(jsonData, options = null) {
-    this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
+        this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
 
-    // Pass options if they exist
-    let optionsCode = 'None';
-    if (options) {
-        this.pyodide.globals.set('opts_json', JSON.stringify(options));
-        optionsCode = 'json.loads(opts_json)';
-        // Ensure json import is available
-        await this.pyodide.runPythonAsync('import json');
-    }
+        // Pass options if they exist
+        let optionsCode = 'None';
+        if (options) {
+            this.pyodide.globals.set('opts_json', JSON.stringify(options));
+            optionsCode = 'json.loads(opts_json)';
+            // Ensure json import is available
+            await this.pyodide.runPythonAsync('import json');
+        }
 
-    const resultJson = await this.pyodide.runPythonAsync(`
+        const resultJson = await this.pyodide.runPythonAsync(`
             result = pipeline.execute(json_data, options=${optionsCode})
             result
         `);
 
-    return JSON.parse(resultJson);
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// UI STATE MANAGEMENT
-// ═══════════════════════════════════════════════════════════════════════
-
-showLoading(message) {
-    this.dom.loadingText.textContent = message;
-    this.dom.loadingIndicator.classList.remove('hidden');
-}
-
-hideLoading() {
-    this.dom.loadingIndicator.classList.add('hidden');
-}
-
-hideError() {
-    this.dom.errorMessage.classList.add('hidden');
-    // @ts-ignore global errorUI
-    errorUI.clearAll();
-}
-
-showResults() {
-    this.dom.uploadSection.classList.add('hidden');
-    this.dom.resultsSection.classList.remove('hidden');
-}
-
-resetToUpload() {
-    this.dom.resultsSection.classList.add('hidden');
-    this.dom.uploadSection.classList.remove('hidden');
-    this.dom.fileInput.value = '';
-    this.hideError();
-    // @ts-ignore global errorUI
-    errorUI.clearAll();
-}
-
-// ═══════════════════════════════════════════════════════════════════════
-// RESULT RENDERING
-// ═══════════════════════════════════════════════════════════════════════
-
-renderResults() {
-    this.renderSummary();
-    this.renderTables();
-    this.renderCharts();
-}
-
-renderSummary() {
-    const summary = this.processedData.summary;
-    document.getElementById('summary-rows').textContent = summary.record_count.toString();
-    document.getElementById('summary-metrics').textContent = summary.metric_count.toString();
-    document.getElementById('summary-missing').textContent = summary.missing_newscast.toString();
-}
-
-renderTables() {
-    const tables = this.processedData.tables;
-
-    // Overall metrics
-    this.tableRenderer.render('table-overall', tables.overall, ['Question', 'Yes %'], this.processedData.config);
-
-    // Data quality
-    this.tableRenderer.render('table-quality', tables.data_quality, ['Question', 'Complete %', 'Missing'], this.processedData.config);
-
-    // Recent week (if available)
-    if (tables.recent) {
-        document.getElementById('recent-week-card').classList.remove('hidden');
-        document.getElementById('recent-week-title').textContent =
-            `Week of ${tables.recent_week_start}`;
-        this.tableRenderer.render('table-recent', tables.recent, ['Question', 'Yes %'], this.processedData.config);
-    } else {
-        document.getElementById('recent-week-card').classList.add('hidden');
+        return JSON.parse(resultJson);
     }
 
-    // Volume by newscast
-    if (tables.volume) {
-        this.tableRenderer.render('table-volume', tables.volume, ['Newscast', 'Responses'], this.processedData.config);
-    }
-}
+    // ═══════════════════════════════════════════════════════════════════════
+    // UI STATE MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════
 
-renderCharts() {
-    const charts = this.processedData.charts;
-    const config = this.processedData.config;
-
-    // Render Charts
-    this.chartRenderer.renderOverallChart('chart-overall', charts.overall, config);
-    this.chartRenderer.renderPerNewscastCharts('charts-per-newscast', charts.per_newscast, config);
-
-    // Render Weekly Chart (New)
-    if (charts.weekly) {
-        this.chartRenderer.renderWeeklyChart('chart-weekly', charts.weekly, config);
+    showLoading(message) {
+        this.dom.loadingText.textContent = message;
+        this.dom.loadingIndicator.classList.remove('hidden');
     }
 
-    // Initialize Weekly Chart Filter
-    if (charts.filter_options && charts.filter_options.length > 0) {
-        const select = /** @type {HTMLSelectElement} */ (document.getElementById('weekly-chart-filter'));
-        if (select) {
-            // Clear existing options (except default?) - simpler to rebuild
-            select.innerHTML = '';
+    hideLoading() {
+        this.dom.loadingIndicator.classList.add('hidden');
+    }
 
-            // Add options
-            charts.filter_options.forEach((opt, index) => {
-                const option = document.createElement('option');
-                // Store index as value to easily retrieve full object later
-                option.value = index.toString();
-                option.textContent = opt.label;
-                select.appendChild(option);
-            });
+    hideError() {
+        this.dom.errorMessage.classList.add('hidden');
+        // @ts-ignore global errorUI
+        errorUI.clearAll();
+    }
 
-            // Add event listener (remove old one to avoid duplicates if re-rendering? 
-            // A clean way is to clone node or just set onchange property)
-            select.onchange = () => {
-                const selectedIndex = parseInt(select.value);
-                const selectedData = charts.filter_options[selectedIndex];
-                if (selectedData) {
-                    try {
-                        // Construct WeeklyChart object from filter option
-                        const weeklyData = {
-                            dates: selectedData.dates,
-                            values: selectedData.values,
-                            full_dates: selectedData.dates, // Fallback
-                            center_line: selectedData.center_line, // Pass CL
-                            ucl: selectedData.ucl,                 // Pass UCL
-                            lcl: selectedData.lcl                  // Pass LCL
-                        };
+    showResults() {
+        this.dom.uploadSection.classList.add('hidden');
+        this.dom.resultsSection.classList.remove('hidden');
+    }
 
-                        this.chartRenderer.renderWeeklyChart('chart-weekly', weeklyData, config);
-                    } catch (e) {
-                        console.error("Error updating chart:", e);
-                    }
-                }
-            };
+    resetToUpload() {
+        this.dom.resultsSection.classList.add('hidden');
+        this.dom.uploadSection.classList.remove('hidden');
+        this.dom.fileInput.value = '';
+        this.hideError();
+        // @ts-ignore global errorUI
+        errorUI.clearAll();
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // RESULT RENDERING
+    // ═══════════════════════════════════════════════════════════════════════
+
+    renderResults() {
+        this.renderSummary();
+        this.renderTables();
+        this.renderCharts();
+    }
+
+    renderSummary() {
+        const summary = this.processedData.summary;
+        document.getElementById('summary-rows').textContent = summary.record_count.toString();
+        document.getElementById('summary-metrics').textContent = summary.metric_count.toString();
+        document.getElementById('summary-missing').textContent = summary.missing_newscast.toString();
+    }
+
+    renderTables() {
+        const tables = this.processedData.tables;
+
+        // Overall metrics
+        this.tableRenderer.render('table-overall', tables.overall, ['Question', 'Yes %'], this.processedData.config);
+
+        // Data quality
+        this.tableRenderer.render('table-quality', tables.data_quality, ['Question', 'Complete %', 'Missing'], this.processedData.config);
+
+        // Recent week (if available)
+        if (tables.recent) {
+            document.getElementById('recent-week-card').classList.remove('hidden');
+            document.getElementById('recent-week-title').textContent =
+                `Week of ${tables.recent_week_start}`;
+            this.tableRenderer.render('table-recent', tables.recent, ['Question', 'Yes %'], this.processedData.config);
+        } else {
+            document.getElementById('recent-week-card').classList.add('hidden');
+        }
+
+        // Volume by newscast
+        if (tables.volume) {
+            this.tableRenderer.render('table-volume', tables.volume, ['Newscast', 'Responses'], this.processedData.config);
         }
     }
 
-    // Render Heatmap (New)
-    // Only if per_newscast data exists
-    if (charts.per_newscast && charts.per_newscast.length > 0) {
-        this.chartRenderer.renderHeatmap('chart-heatmap', charts.per_newscast, config);
-    }
+    renderCharts() {
+        const charts = this.processedData.charts;
+        const config = this.processedData.config;
 
-    // Render Tables
-    // We use the generic render method for tables
-    this.tableRenderer.render('table-overall', this.processedData.tables.overall, ['Question', 'Yes %'], config);
-    this.tableRenderer.render('table-quality', this.processedData.tables.data_quality, ['Question', 'Complete %', 'Missing'], config);
-    this.tableRenderer.render('table-volume', this.processedData.tables.volume, ['Newscast', 'Responses'], config);
+        // Render Charts
+        this.chartRenderer.renderOverallChart('chart-overall', charts.overall, config);
+        this.chartRenderer.renderPerNewscastCharts('charts-per-newscast', charts.per_newscast, config);
 
-    // Render Comments (New)
-    // @ts-ignore
-    if (this.processedData.comments) {
+        // Render Weekly Chart (New)
+        if (charts.weekly) {
+            this.chartRenderer.renderWeeklyChart('chart-weekly', charts.weekly, config);
+        }
+
+        // Initialize Weekly Chart Filter
+        if (charts.filter_options && charts.filter_options.length > 0) {
+            const select = /** @type {HTMLSelectElement} */ (document.getElementById('weekly-chart-filter'));
+            if (select) {
+                // Clear existing options (except default?) - simpler to rebuild
+                select.innerHTML = '';
+
+                // Add options
+                charts.filter_options.forEach((opt, index) => {
+                    const option = document.createElement('option');
+                    // Store index as value to easily retrieve full object later
+                    option.value = index.toString();
+                    option.textContent = opt.label;
+                    select.appendChild(option);
+                });
+
+                // Add event listener (remove old one to avoid duplicates if re-rendering? 
+                // A clean way is to clone node or just set onchange property)
+                select.onchange = () => {
+                    const selectedIndex = parseInt(select.value);
+                    const selectedData = charts.filter_options[selectedIndex];
+                    if (selectedData) {
+                        try {
+                            // Construct WeeklyChart object from filter option
+                            const weeklyData = {
+                                dates: selectedData.dates,
+                                values: selectedData.values,
+                                full_dates: selectedData.dates, // Fallback
+                                center_line: selectedData.center_line, // Pass CL
+                                ucl: selectedData.ucl,                 // Pass UCL
+                                lcl: selectedData.lcl                  // Pass LCL
+                            };
+
+                            this.chartRenderer.renderWeeklyChart('chart-weekly', weeklyData, config);
+                        } catch (e) {
+                            console.error("Error updating chart:", e);
+                        }
+                    }
+                };
+            }
+        }
+
+        // Render Heatmap (New)
+        // Only if per_newscast data exists
+        if (charts.per_newscast && charts.per_newscast.length > 0) {
+            this.chartRenderer.renderHeatmap('chart-heatmap', charts.per_newscast, config);
+        }
+
+        // Render Tables
+        // We use the generic render method for tables
+        this.tableRenderer.render('table-overall', this.processedData.tables.overall, ['Question', 'Yes %'], config);
+        this.tableRenderer.render('table-quality', this.processedData.tables.data_quality, ['Question', 'Complete %', 'Missing'], config);
+        this.tableRenderer.render('table-volume', this.processedData.tables.volume, ['Newscast', 'Responses'], config);
+
+        // Render Comments (New)
         // @ts-ignore
-        this.commentRenderer.renderComments('comments-feed', this.processedData.comments);
+        if (this.processedData.comments) {
+            // @ts-ignore
+            this.commentRenderer.renderComments('comments-feed', this.processedData.comments);
+        }
     }
-}
 
     // ═══════════════════════════════════════════════════════════════════════
     // EXPORT FUNCTIONALITY
     // ═══════════════════════════════════════════════════════════════════════
 
     async exportExcel() {
-    if (!this.processedData) return;
-    // @ts-ignore
-    await this.exporter.exportToExcel(this.processedData);
-}
+        if (!this.processedData) return;
+        // @ts-ignore
+        await this.exporter.exportToExcel(this.processedData);
+    }
 
     async exportPowerPoint() {
-    if (!this.processedData) return;
-    await this.exporter.exportToPowerPoint(this.processedData, this.chartRenderer);
-}
+        if (!this.processedData) return;
+        await this.exporter.exportToPowerPoint(this.processedData, this.chartRenderer);
+    }
 }
