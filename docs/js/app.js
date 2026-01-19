@@ -386,8 +386,28 @@ export class NewscastAuditApp {
         } catch (error) {
             this.hideLoading();
             console.error('Processing error:', error);
+
+            let msg = "Unknown error occurred";
+            if (typeof error === 'string') {
+                msg = error;
+            } else if (error instanceof Error) {
+                msg = error.message;
+            } else if (typeof error === 'object' && error !== null) {
+                // @ts-ignore
+                if (error.message) msg = error.message;
+                // @ts-ignore
+                else if (error.error) msg = error.error; // Sometimes it's { error: "msg" }
+                else {
+                    try {
+                        msg = JSON.stringify(error);
+                    } catch (e) {
+                        msg = "Error object could not be stringified";
+                    }
+                }
+            }
+
             // @ts-ignore global errorUI
-            errorUI.showError(`Error processing file: ${error.message || error}`);
+            errorUI.showError(`Error processing file: ${msg}`);
         }
     }
 
