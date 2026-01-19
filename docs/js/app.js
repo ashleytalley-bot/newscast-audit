@@ -4,11 +4,12 @@ import { ChartRenderer } from './modules/ChartRenderer.js';
 import { TableRenderer } from './modules/TableRenderer.js';
 import { DataExporter } from './modules/DataExporter.js';
 import { CommentRenderer } from './modules/CommentRenderer.js';
+import { PyodideService } from './services/PyodideService.js';
+
 
 /**
- * @typedef {import('./types').ProcessingResult} ProcessingResult
- * @typedef {import('./types').ErrorResponse} ErrorResponse
- * @typedef {import('./types').ProcessingOutput} ProcessingOutput
+ * @typedef {import('./types/output').ProcessingResult} ProcessingResult
+ * @typedef {import('./types/errors').ErrorResponse} ErrorResponse
  */
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -23,9 +24,11 @@ import { CommentRenderer } from './modules/CommentRenderer.js';
 export class NewscastAuditApp {
     constructor() {
         console.log("NewscastAuditApp constructor called");
-        this.pyodide = null;
+        this.pyodideService = new PyodideService();
         /** @type {ProcessingResult | null} */
         this.processedData = null;
+
+
 
         // DOM Elements
         this.dom = {
@@ -103,7 +106,9 @@ export class NewscastAuditApp {
                 filter_start_date: start || null,
                 filter_end_date: end || null
             };
-            const result = await this.processDataWithPython(this.jsonData, options);
+
+            const result = await this.pyodideService.processData(this.jsonData, options);
+
             if (result.success) {
                 // @ts-ignore
                 this.processedData = result;
@@ -142,240 +147,6 @@ export class NewscastAuditApp {
         } catch (err) {
             console.error('Failed to copy comments: ', err);
             alert("Failed to copy to clipboard.");
-        }
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // FILE HANDLING
-    // ═══════════════════════════════════════════════════════════════════════
-
-    handleDragOver(e) {
-        e.preventDefault();
-        this.dom.dropZone.classList.add('drag-over');
-    }
-
-    handleDragLeave(e) {
-        e.preventDefault();
-        this.dom.dropZone.classList.remove('drag-over');
-    }
-
-    handleDrop(e) {
-        e.preventDefault();
-        this.dom.dropZone.classList.remove('drag-over');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            this.processFile(files[0]);
-        }
-    }
-
-    handleFileSelect(e) {
-        const files = e.target.files;
-        if (files.length > 0) {
-            this.processFile(files[0]);
-        }
-    }
-
-    /**
-     * Process uploaded Excel file
-     * @param {File} file 
-     */
-    async processFile(file) {
-        try {
-            // Validate file type
-            if (!file.name.match(/\.xlsx?$/i)) {
-                // @ts-ignore global errorUI
-                errorUI.showError('Please upload an Excel file (.xlsx or .xls)');
-                return;
-            }
-
-            this.hideError();
-            this.showLoading(LOADING_MESSAGES.readingFile);
-
-            // Clear existing period filters on new file upload to show full range by default
-            const startInput = document.getElementById('filter-start-date');
-            const endInput = document.getElementById('filter-end-date');
-            if (startInput) (/** @type {HTMLInputElement} */ (startInput)).value = '';
-            if (endInput) (/** @type {HTMLInputElement} */ (endInput)).value = '';
-
-            // Parse Excel file
-            const jsonData = await this.parseExcelFile(file);
-            this.jsonData = jsonData; // Store for filtering re-runs
-
-            // Validate data
-            if (!jsonData || jsonData.length === 0) {
-                // @ts-ignore global errorUI
-                errorUI.showError('Excel file appears to be empty');
-                return;
-            }
-
-            // Initialize Python environment
-            this.showLoading(LOADING_MESSAGES.initPython);
-            await this.initializePyodide();
-
-            // Process data
-            this.showLoading(LOADING_MESSAGES.processing);
-            const result = await this.processDataWithPython(jsonData); // Initial run (no options)
-
-            if (!result.success) {
-                // Show structured error with ErrorUI
-                // @ts-ignore global errorUI
-                errorUI.showError(result);
-                this.hideLoading();
-                return;
-            }
-
-            // Show data quality warnings and info
-            // @ts-ignore
-            if (result.quality && (
-                (result.quality.warnings && result.quality.warnings.length > 0) ||
-                (result.quality.info && result.quality.info.length > 0)
-            )) {
-                // @ts-ignore
-                errorUI.showWarnings(result.quality);
-            }
-
-            // Render results
-            this.showLoading(LOADING_MESSAGES.rendering);
-            // @ts-ignore result is Success here
-            this.processedData = result;
-            this.renderResults();
-
-            this.hideLoading();
-            this.showResults();
-
-            // Initialize Date Filters AFTER showing results so slider can calculate width
-            // Fixes "slider stuck" issue
-            this.initializeDateFilters(result);
-
-        } catch (error) {
-            this.hideLoading();
-            console.error('Processing error:', error);
-            // @ts-ignore global errorUI
-            errorUI.showError(`Error processing file: ${error.message || error}`);
-        }
-    }
-
-    /**
-     * Parse Excel file to JSON using SheetJS
-     * @param {File} file 
-     */
-    async parseExcelFile(file) {
-        const arrayBuffer = await file.arrayBuffer();
-        // Use cellDates: true to force date parsing (avoids serial numbers like 45971)
-        // @ts-ignore XLSX
-        const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        // @ts-ignore XLSX
-        return XLSX.utils.sheet_to_json(firstSheet);
-    }
-
-    /**
-     * Initialize Pyodide (Python in browser)
-     */
-    async initializePyodide() {
-        if (!this.pyodide) {
-            // @ts-ignore
-            this.pyodide = await loadPyodide();
-
-            this.showLoading(LOADING_MESSAGES.loadingLibs);
-            await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml', 'pydantic']);
-
-            // Load all Python files
-            await this.loadPythonFiles();
-
-            // Fetch configuration files
-            // We fetch these from the web server so they can be edited without rebuilding the app
-            console.log("Fetching configuration files...");
-            const [stationYaml, surveyYaml, normYaml] = await Promise.all([
-                fetch('config/stations/default.yaml').then(r => r.text()),
-                fetch('config/surveys/newscast-audit-v1.yaml').then(r => r.text()),
-                fetch('config/normalization/newscast-patterns.yaml').then(r => r.text())
-            ]);
-
-            // Initialize configuration
-            // We pass the raw YAML strings to Python because Python (PyYAML) is better 
-            // at parsing complex YAML structures than JS libraries.
-            console.log("Initializing configuration...");
-            this.pyodide.globals.set('station_yaml', stationYaml);
-            this.pyodide.globals.set('survey_yaml', surveyYaml);
-            this.pyodide.globals.set('norm_yaml', normYaml);
-
-            await this.pyodide.runPythonAsync(`
-                from lib.config_dynamic import initialize_config
-                # Hydrate the global config object with the fetched YAMLs
-                initialize_config(station_yaml, survey_yaml, norm_yaml)
-            `);
-
-            // Import the processing pipeline
-            await this.pyodide.runPythonAsync(`
-                from py.pipeline.orchestrator import ProcessingPipeline
-                pipeline = ProcessingPipeline()
-            `);
-        }
-    }
-
-    async loadPythonFiles() {
-        let files;
-        try {
-            // Fetch the manifest generated by build.py
-            const manifestResponse = await fetch(`py-files.json?t=${new Date().getTime()}`);
-            if (!manifestResponse.ok) throw new Error('Failed to load py-files.json manifest');
-            files = await manifestResponse.json();
-            console.log('Loading Python files from manifest:', files);
-        } catch (err) {
-            console.error('Failed to load manifest, falling back to core file list:', err);
-            // Fallback just in case manifest is missing
-            files = [
-                'lib/__init__.py',
-                'lib/config.py',
-                'lib/cleaners.py',
-                'lib/builders.py',
-                'lib/utils.py',
-                'lib/exceptions.py',
-                'py/processing.py'
-            ];
-        }
-
-        // Dynamically identify all unique directories that need to be created
-        const dirs = new Set();
-        files.forEach(file => {
-            const parts = file.split('/');
-            if (parts.length > 1) {
-                // "py/pipeline/steps/clean.py" -> "py/pipeline/steps"
-                // We keep adding parents until we reach top level
-                // Actually os.makedirs creates variables parents, so we just need the deepest dir for each file
-                const dir = parts.slice(0, parts.length - 1).join('/');
-                dirs.add(dir);
-            }
-        });
-
-        const dirList = Array.from(dirs);
-        console.log("Ensuring directories exist:", dirList);
-
-        // Use Python to create directories (robust handling of existing dirs)
-        this.pyodide.globals.set('required_dirs', JSON.stringify(dirList));
-        this.pyodide.runPython(`
-            import os
-            import json
-            dirs = json.loads(required_dirs)
-            for d in dirs:
-                os.makedirs(d, exist_ok=True)
-        `);
-
-        // Fetch and write files
-        for (const file of files) {
-            try {
-                // Add cache busting to ensure fresh code is loaded
-                const response = await fetch(`${file}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error(`Failed to load ${file}`);
-                const content = await response.text();
-                // Ensure parent directory exists for nested files inside sub-sub-folders if any
-                // (though current structure is flat enough)
-                this.pyodide.FS.writeFile(file, content);
-            } catch (err) {
-                console.error(`Error loading ${file}:`, err);
-                throw err;
-            }
         }
     }
 
@@ -509,35 +280,134 @@ export class NewscastAuditApp {
         }
     }
 
-    /**
-     * Process the data using the Python pipeline
-     * @param {any[]} jsonData - The parsed Excel data
-     * @param {Object} [options] - Filter options
-     * @returns {Promise<ProcessingOutput>} The processing result or error response
-     */
-    async processDataWithPython(jsonData, options = null) {
-        this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
+    // ═══════════════════════════════════════════════════════════════════════
+    // FILE HANDLING
+    // ═══════════════════════════════════════════════════════════════════════
 
-        // Pass options if they exist
-        let optionsCode = 'None';
-        if (options) {
-            this.pyodide.globals.set('opts_json', JSON.stringify(options));
-            optionsCode = 'json.loads(opts_json)';
-            // Ensure json import is available
-            await this.pyodide.runPythonAsync('import json');
-        }
-
-        const resultJson = await this.pyodide.runPythonAsync(`
-            result = pipeline.execute(json_data, options=${optionsCode})
-            result
-        `);
-
-        return JSON.parse(resultJson);
+    handleDragOver(e) {
+        e.preventDefault();
+        this.dom.dropZone.classList.add('drag-over');
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
+    handleDragLeave(e) {
+        e.preventDefault();
+        this.dom.dropZone.classList.remove('drag-over');
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        this.dom.dropZone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            this.processFile(files[0]);
+        }
+    }
+
+    handleFileSelect(e) {
+        const files = e.target.files;
+        if (files.length > 0) {
+            this.processFile(files[0]);
+        }
+    }
+
+    /**
+     * Process uploaded Excel file
+     * @param {File} file 
+     */
+    async processFile(file) {
+        try {
+            // Validate file type
+            if (!file.name.match(/\.xlsx?$/i)) {
+                // @ts-ignore global errorUI
+                errorUI.showError('Please upload an Excel file (.xlsx or .xls)');
+                return;
+            }
+
+            this.hideError();
+            this.showLoading(LOADING_MESSAGES.readingFile);
+
+            // Clear existing period filters on new file upload to show full range by default
+            const startInput = document.getElementById('filter-start-date');
+            const endInput = document.getElementById('filter-end-date');
+            if (startInput) (/** @type {HTMLInputElement} */ (startInput)).value = '';
+            if (endInput) (/** @type {HTMLInputElement} */ (endInput)).value = '';
+
+            // Parse Excel file
+            const jsonData = await this.parseExcelFile(file);
+            this.jsonData = jsonData; // Store for filtering re-runs
+
+
+            // Validate data
+            if (!jsonData || jsonData.length === 0) {
+                // @ts-ignore global errorUI
+                errorUI.showError('Excel file appears to be empty');
+                return;
+            }
+
+            // Initialize Python environment
+            this.showLoading(LOADING_MESSAGES.initPython);
+            await this.pyodideService.initialize();
+
+            // Process data
+            this.showLoading(LOADING_MESSAGES.processing);
+            const result = await this.pyodideService.processData(jsonData); // Initial run (no options)
+
+            if (!result.success) {
+                // Show structured error with ErrorUI
+                // @ts-ignore global errorUI
+                errorUI.showError(result);
+                this.hideLoading();
+                return;
+            }
+
+            // Show data quality warnings and info
+            // @ts-ignore
+            if (result.quality && (
+                (result.quality.warnings && result.quality.warnings.length > 0) ||
+                (result.quality.info && result.quality.info.length > 0)
+            )) {
+                // @ts-ignore
+                errorUI.showWarnings(result.quality);
+            }
+
+            // Render results
+            this.showLoading(LOADING_MESSAGES.rendering);
+            // @ts-ignore result is Success here
+            this.processedData = result;
+            this.renderResults();
+
+            this.hideLoading();
+            this.showResults();
+
+            // Initialize Date Filters AFTER showing results so slider can calculate width
+            // Fixes "slider stuck" issue
+            this.initializeDateFilters(result);
+
+        } catch (error) {
+            this.hideLoading();
+            console.error('Processing error:', error);
+            // @ts-ignore global errorUI
+            errorUI.showError(`Error processing file: ${error.message || error}`);
+        }
+    }
+
+    /**
+     * Parse Excel file to JSON using SheetJS
+     * @param {File} file 
+     */
+    async parseExcelFile(file) {
+        const arrayBuffer = await file.arrayBuffer();
+        // Use cellDates: true to force date parsing (avoids serial numbers like 45971)
+        // @ts-ignore XLSX
+        const workbook = XLSX.read(arrayBuffer, { type: 'array', cellDates: true });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        // @ts-ignore XLSX
+        return XLSX.utils.sheet_to_json(firstSheet);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════════
     // UI STATE MANAGEMENT
-    // ═══════════════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════════════════════════════════════
 
     showLoading(message) {
         this.dom.loadingText.textContent = message;
