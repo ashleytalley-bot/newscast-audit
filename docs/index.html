@@ -238,6 +238,8 @@
         document.addEventListener('DOMContentLoaded', () => {
             try {
                 const app = new NewscastAuditApp();
+                // @ts-ignore
+                window.app = app;
                 app.init();
             } catch (e) {
                 console.error("App Init Error:", e);

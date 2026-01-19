@@ -48,7 +48,7 @@ export class PyodideService {
         });
 
         console.log('[PyodideService] Loading Python packages...');
-        await this.pyodide.loadPackage(['pandas', 'numpy']);
+        await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml']);
 
         console.log('[PyodideService] Loading application Python files...');
         await this.loadPythonFiles();
@@ -124,15 +124,17 @@ export class PyodideService {
         const normYaml = await this.fetchConfig('config/normalization/newscast-patterns.yaml');
 
         // Initialize config in Python
+        // Initialize config in Python
+        // We set globals directly to avoid syntax errors from string interpolation
+        // if the YAML contains quotes or backslashes.
+        this.pyodide.globals.set("station_yaml", stationYaml);
+        this.pyodide.globals.set("survey_yaml", surveyYaml);
+        this.pyodide.globals.set("norm_yaml", normYaml);
+
         await this.pyodide.runPythonAsync(`
-from lib.config_dynamic import initialize_config
-
-station_yaml = """${stationYaml}"""
-survey_yaml = """${surveyYaml}"""
-norm_yaml = """${normYaml}"""
-
-initialize_config(station_yaml, survey_yaml, norm_yaml)
-print("[Python] Configuration initialized")
+            from lib.config_dynamic import initialize_config
+            initialize_config(station_yaml, survey_yaml, norm_yaml)
+            print("[Python] Configuration initialized")
         `);
     }
 

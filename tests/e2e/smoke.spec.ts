@@ -36,8 +36,21 @@ test.describe('Newscast Audit App', () => {
     test('should complete initialization', async ({ page }) => {
         await page.goto('/');
 
-        // The loading indicator should eventually disappear (have class 'hidden')
-        // This confirms Pyodide loaded, bootstrapped, and the app is ready.
+        // Manually trigger initialization since it is lazy-loaded (normally on file drop)
+        // This is required to catch startup errors like missing packages (e.g. pyyaml)
+        await page.evaluate(async () => {
+            // @ts-ignore
+            if (window.app && window.app.pyodideService) {
+                // @ts-ignore
+                window.app.showLoading("Testing Initialization...");
+                // @ts-ignore
+                await window.app.pyodideService.initialize();
+                // @ts-ignore
+                window.app.hideLoading();
+            }
+        });
+
+        // The loading indicator should eventually disappear
         const loader = page.locator('#loading-indicator');
         await expect(loader).toHaveClass(/hidden/, { timeout: 30000 });
 

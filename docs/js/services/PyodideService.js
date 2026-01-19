@@ -28,7 +28,7 @@ class PyodideService {
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
     });
     console.log("[PyodideService] Loading Python packages...");
-    await this.pyodide.loadPackage(["pandas", "numpy"]);
+    await this.pyodide.loadPackage(["pandas", "numpy", "pyyaml"]);
     console.log("[PyodideService] Loading application Python files...");
     await this.loadPythonFiles();
     console.log("[PyodideService] Initializing configuration...");
@@ -87,15 +87,13 @@ class PyodideService {
     const stationYaml = await this.fetchConfig("config/stations/default.yaml");
     const surveyYaml = await this.fetchConfig("config/surveys/newscast-audit-v1.yaml");
     const normYaml = await this.fetchConfig("config/normalization/newscast-patterns.yaml");
+    this.pyodide.globals.set("station_yaml", stationYaml);
+    this.pyodide.globals.set("survey_yaml", surveyYaml);
+    this.pyodide.globals.set("norm_yaml", normYaml);
     await this.pyodide.runPythonAsync(`
-from lib.config_dynamic import initialize_config
-
-station_yaml = """${stationYaml}"""
-survey_yaml = """${surveyYaml}"""
-norm_yaml = """${normYaml}"""
-
-initialize_config(station_yaml, survey_yaml, norm_yaml)
-print("[Python] Configuration initialized")
+            from lib.config_dynamic import initialize_config
+            initialize_config(station_yaml, survey_yaml, norm_yaml)
+            print("[Python] Configuration initialized")
         `);
   }
   /**
