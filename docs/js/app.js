@@ -3,6 +3,16 @@
    Class-based architecture with better separation of concerns
    ═══════════════════════════════════════════════════════════════════════════ */
 
+// @ts-check
+
+/**
+ * @typedef {import('./types').ProcessingResult} ProcessingResult
+ * @typedef {import('./types').ErrorResponse} ErrorResponse
+ * @typedef {import('./types').ProcessingOutput} ProcessingOutput
+ * @typedef {import('./types').ProcessingSummary} ProcessingSummary
+ * @typedef {import('./types').ChartData} ChartData
+ */
+
 // ═══════════════════════════════════════════════════════════════════════════
 // CONFIGURATION CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════
@@ -293,6 +303,11 @@ class NewscastAuditApp {
 
     /**
      * Process data using Python (via Pyodide)
+     */
+    /**
+     * Process the data using the Python pipeline
+     * @param {any[]} jsonData - The parsed Excel data
+     * @returns {Promise<ProcessingOutput>} The processing result or error response
      */
     async processDataWithPython(jsonData) {
         this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
