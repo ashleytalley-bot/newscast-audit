@@ -29,19 +29,59 @@ const entryPoints = [
 
 console.log('Compiling TypeScript files:', entryPoints);
 
+// Helper to get all files in a directory matching a pattern
+function getFilesRecursive(dir, pattern, baseDir) {
+    let results = [];
+    if (!fs.existsSync(dir)) return results;
+
+    const list = fs.readdirSync(dir);
+    list.forEach(file => {
+        const filePath = path.join(dir, file);
+        const stat = fs.statSync(filePath);
+        if (stat && stat.isDirectory()) {
+            if (file !== '__pycache__') {
+                results = results.concat(getFilesRecursive(filePath, pattern, baseDir));
+            }
+        } else if (file.match(pattern)) {
+            const relPath = path.relative(baseDir, filePath);
+            results.push(relPath.split(path.sep).join('/'));
+        }
+    });
+    return results;
+}
+
 async function build() {
     try {
+        console.log('Building TypeScript...');
         await esbuild.build({
             entryPoints: entryPoints,
-            outdir: '.', // Output to same directories (e.g. docs/js/services)
-            outbase: '.', // Preserve full path from root
-            allowOverwrite: true, // Allow writing next to source
-            bundle: false, // Don't bundle, keep individual files suitable for ESM import
+            outdir: '.',
+            outbase: '.',
+            allowOverwrite: true,
+            bundle: false,
             format: 'esm',
             platform: 'browser',
             target: ['es2020'],
             sourcemap: true,
         });
+
+        // Generate Python manifests (replacing build.py)
+        console.log('Generating manifests...');
+        const docsDir = 'docs';
+
+        // Python files
+        const pyFiles = [
+            ...getFilesRecursive(path.join(docsDir, 'lib'), /\.py$/, docsDir),
+            ...getFilesRecursive(path.join(docsDir, 'py'), /\.py$/, docsDir)
+        ].sort();
+        fs.writeFileSync(path.join(docsDir, 'py-files.json'), JSON.stringify(pyFiles, null, 2));
+        console.log(`✓ Generated py-files.json (${pyFiles.length} files)`);
+
+        // Config files
+        const configFiles = getFilesRecursive(path.join(docsDir, 'config'), /\.yaml$/, docsDir).sort();
+        fs.writeFileSync(path.join(docsDir, 'config-files.json'), JSON.stringify(configFiles, null, 2));
+        console.log(`✓ Generated config-files.json (${configFiles.length} files)`);
+
         console.log('⚡ Build complete!');
     } catch (error) {
         console.error('Build failed:', error);

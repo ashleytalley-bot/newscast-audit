@@ -1,16 +1,10 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 class PyodideService {
   constructor() {
-    __publicField(this, "worker", null);
-    __publicField(this, "initPromise", null);
-    __publicField(this, "messageIdCounter", 0);
-    __publicField(this, "pendingMessages", /* @__PURE__ */ new Map());
-    __publicField(this, "onProgressCallback", null);
+    this.worker = null;
+    this.initPromise = null;
+    this.messageIdCounter = 0;
+    this.pendingMessages = /* @__PURE__ */ new Map();
+    this.onProgressCallback = null;
   }
   /**
    * Register a callback for progress updates.

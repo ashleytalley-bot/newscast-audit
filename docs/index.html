@@ -217,7 +217,6 @@
         <p>Newscast Audit Report Tool • v2.2.3</p>
     </footer>
 
-    <script src="js/error-ui.js"></script>
     <script>
         // Global error handler to catch startup issues
         window.onerror = function (msg, url, line, col, error) {
@@ -235,6 +234,8 @@
     </script>
     <script type="module">
         import { NewscastAuditApp } from './js/app.js?v=8';
+        import { errorUI } from './js/modules/ErrorUI.js';
+
         document.addEventListener('DOMContentLoaded', () => {
             try {
                 const app = new NewscastAuditApp();
@@ -243,9 +244,7 @@
                 app.init();
             } catch (e) {
                 console.error("App Init Error:", e);
-                // @ts-ignore
-                if (window.errorUI) window.errorUI.showError(e);
-                else document.getElementById('error-message').textContent = e.toString();
+                errorUI.showError(e);
             }
         });
     </script>

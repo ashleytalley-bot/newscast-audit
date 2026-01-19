@@ -51,6 +51,12 @@ export interface WeeklyChart {
     values: (number | null)[];
     /** Full ISO date strings (YYYY-MM-DD) */
     full_dates: string[];
+    /** Process center line (mean) */
+    center_line?: number | null;
+    /** Upper Control Limit values */
+    ucl?: (number | null)[] | null;
+    /** Lower Control Limit values */
+    lcl?: (number | null)[] | null;
 }
 
 /**
@@ -63,6 +69,12 @@ export interface FilterOption {
     dates: string[];
     /** Weekly percentages for this filter */
     values: (number | null)[];
+    /** Process center line (mean) */
+    center_line?: number | null;
+    /** Upper Control Limit values */
+    ucl?: (number | null)[] | null;
+    /** Lower Control Limit values */
+    lcl?: (number | null)[] | null;
 }
 
 /**
@@ -77,6 +89,8 @@ export interface ChartsCollection {
     weekly: WeeklyChart | null;
     /** Interactive filter options for weekly chart */
     filter_options: FilterOption[];
+    /** Min and max dates from raw data for slider */
+    date_range: { min: string | null; max: string | null } | null;
 }
 
 /**
@@ -160,6 +174,18 @@ export interface ConfigPassthrough {
 }
 
 /**
+ * A single user comment from the audit.
+ */
+export interface Comment {
+    /** Date of the newscast */
+    date: string;
+    /** Newscast audited */
+    newscast: string;
+    /** The comment text */
+    text: string;
+}
+
+/**
  * Successful processing result - the main output contract.
  */
 export interface ProcessingResult {
@@ -171,6 +197,8 @@ export interface ProcessingResult {
     tables: TablesCollection;
     /** All chart data */
     charts: ChartsCollection;
+    /** List of all additional comments */
+    comments: Comment[];
     /** Data for export functionality */
     export_data: ExportData;
     /** Configuration for frontend */

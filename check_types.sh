@@ -14,5 +14,11 @@
 # - docs/lib: Shared library code (cleaners, builders, config)
 # - docs/py/pipeline: Modular pipeline steps (Clean, Aggregate, etc.)
 
-python3 build.py
+# Run build to ensure manifests are fresh
+node scripts/build.js
+
+echo "Checking Python types (Mypy)..."
 python3 -m mypy docs/lib docs/py/pipeline
+
+echo "Checking TypeScript types (tsc)..."
+npx tsc -p docs/js/tsconfig.json --noEmit

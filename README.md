@@ -17,62 +17,49 @@ A browser-based tool for analyzing newscast quality audit survey data. Upload yo
 newscast-audit/
 ├── docs/                   # Web Application (Deployed to GitHub Pages)
 │   ├── index.html          # Main UI entry point
-│   ├── config/             # YAML configuration files (Station, Survey, Patterns)
-│   ├── js/                 # JavaScript (app.js logic, error-ui components)
-│   ├── css/                # Styles (branding, layout, error UI)
+│   ├── config/             # YAML configuration files
+│   ├── js/                 # TypeScript source and compiled JS modules
 │   ├── lib/                # Shared Python logic (cleaners, builders, utils)
-│   └── py/pipeline/        # Modular processing pipeline (orchestrator, steps)
+│   └── py/pipeline/        # Modular processing pipeline
 │
-├── tests/                  # Pytest suite for backend logic
-├── build.py                # Manifest generator for frontend assets
-├── check_types.sh          # Static type checking script (Mypy)
-├── mypy.ini                # Mypy configuration
-└── requirements-test.txt   # Development dependencies
+├── tests/                  # E2E Playwright tests and Python unit tests
+├── scripts/                # Build and maintenance scripts
+├── check_types.sh          # Static type checking script (Mypy + TSC)
+├── tsconfig.json           # TypeScript configuration
+└── package.json            # Node dependencies and scripts
 ```
 
 ## Quick Start (Local Development)
 
-### 1. Build Manifests
-The frontend needs a manifest of all Python and config files to load them into the browser. Run this whenever you add or remove files:
+### 1. Install Dependencies
 ```bash
-python3 build.py
-```
-
-### 2. Launch Server
-```bash
-cd docs
-python3 -m http.server 8000
-```
-Visit `http://localhost:8000` in your browser.
-
-## Configuration
-
-The application is driven by YAML files in `docs/config/`:
-
-- **`stations/default.yaml`**: Station names, timezones, and performance thresholds.
-- **`surveys/newscast-audit-v1.yaml`**: Column mappings and metric definitions.
-- **`normalization/newscast-patterns.yaml`**: Regex patterns for newscast time normalization.
-
-## Development & Quality
-
-### Maintenance Scripts
-- **`./check_types.sh`**: Runs Mypy across the library and pipeline.
-- **`python3 build.py`**: Updates `py-files.json` and `config-files.json` manifests.
-
-### Automated Checks
-A Git pre-commit hook is installed to automatically run `check_types.sh` before every commit. To install dependencies for local development:
-```bash
+npm install
 pip install -r requirements-test.txt
 ```
 
-### Running Tests
+### 2. Build and Type Check
+This script compiles TypeScript, generates manifest files, and runs both Mypy and TSC.
 ```bash
-python3 -m pytest tests/
+./check_types.sh
 ```
+
+### 3. Launch Server
+```bash
+npx http-server docs
+```
+Visit `http://localhost:8080` in your browser.
+
+## Development
+
+### Useful Commands
+- `npm run build`: Compiles TS and generates Python/Config manifests.
+- `npm test`: Runs Playwright E2E tests.
+- `npm run watch`: Automatically rebuilds on file changes.
+- `./check_types.sh`: Full validation (Build + Mypy + TSC).
 
 ## Deployment
 
-The app is hosted via GitHub Pages from the `docs/` folder. Simply push to `main` to deploy changes. Ensure you have run `python3 build.py` if you have added new Python or YAML files.
+The app is hosted via GitHub Pages from the `docs/` folder. A GitHub Action automatically builds and verifies every push to `main`. To manually prepare a deployment, ensure you have run `npm run build`.
 
 ---
 **Internal TEGNA tool.** Not for public distribution.

@@ -1,5 +1,3 @@
-// @ts-check
-
 /**
  * Chart configuration defaults
  */

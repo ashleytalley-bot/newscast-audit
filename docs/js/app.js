@@ -1,27 +1,16 @@
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
 import { LOADING_MESSAGES } from "./modules/config.js";
 import { ChartRenderer } from "./modules/ChartRenderer.js";
 import { TableRenderer } from "./modules/TableRenderer.js";
 import { DataExporter } from "./modules/DataExporter.js";
 import { CommentRenderer } from "./modules/CommentRenderer.js";
 import { PyodideService } from "./services/PyodideService.js";
+import { errorUI } from "./modules/ErrorUI.js";
 class NewscastAuditApp {
   constructor() {
-    __publicField(this, "pyodideService");
-    __publicField(this, "processedData", null);
-    __publicField(this, "jsonData", null);
+    this.processedData = null;
+    this.jsonData = null;
     // Raw Excel data
-    __publicField(this, "isInitializingSlider", false);
-    __publicField(this, "dom");
-    __publicField(this, "chartRenderer");
-    __publicField(this, "tableRenderer");
-    __publicField(this, "commentRenderer");
-    __publicField(this, "exporter");
+    this.isInitializingSlider = false;
     console.log("NewscastAuditApp constructor called");
     this.pyodideService = new PyodideService();
     this.dom = {
@@ -134,7 +123,7 @@ class NewscastAuditApp {
     let minTimestamp;
     let maxTimestamp;
     let pChartDates = [];
-    if (result.charts?.date_range?.min) {
+    if (result.charts?.date_range && result.charts.date_range.min && result.charts.date_range.max) {
       minTimestamp = new Date(result.charts.date_range.min).getTime();
       maxTimestamp = new Date(result.charts.date_range.max).getTime();
       console.log("Using raw daily date range:", result.charts.date_range);

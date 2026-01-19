@@ -4,17 +4,14 @@ import { TableRenderer } from './modules/TableRenderer.js';
 import { DataExporter } from './modules/DataExporter.js';
 import { CommentRenderer } from './modules/CommentRenderer.js';
 import { PyodideService } from './services/PyodideService.js';
-import type { ProcessingResult, ProcessingOutput } from './types/output';
+import { errorUI } from './modules/ErrorUI.js';
+import { isProcessingResult, ProcessingOutput } from './types/index.js';
+import type { ProcessingResult } from './types/output';
 import type { ErrorResponse } from './types/errors';
 
 // External library type definitions (since we load them via CDN/script tags)
 declare const XLSX: any;
 declare const noUiSlider: any;
-declare const errorUI: {
-    showError(error: string | ErrorResponse | ProcessingOutput): void;
-    showWarnings(quality: any): void;
-    clearAll(): void;
-};
 
 interface DOMElements {
     uploadSection: HTMLElement;
@@ -182,7 +179,7 @@ export class NewscastAuditApp {
         let maxTimestamp: number | undefined;
         let pChartDates: string[] = [];
 
-        if (result.charts?.date_range?.min) {
+        if (result.charts?.date_range && result.charts.date_range.min && result.charts.date_range.max) {
             minTimestamp = new Date(result.charts.date_range.min).getTime();
             maxTimestamp = new Date(result.charts.date_range.max).getTime();
             console.log("Using raw daily date range:", result.charts.date_range);

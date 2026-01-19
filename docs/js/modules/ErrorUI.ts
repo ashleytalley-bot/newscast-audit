@@ -1,19 +1,25 @@
 /**
  * Enhanced Error UI Components
- *
+ * 
  * Provides rich, user-friendly error messages with actionable guidance.
  */
 
-class ErrorUI {
+import type { ErrorResponse } from '../types/errors';
+import type { ProcessingResult } from '../types/output';
+
+export class ErrorUI {
+    private errorContainer: HTMLElement;
+    private warningsContainer: HTMLElement;
+
     constructor() {
-        this.errorContainer = document.getElementById('error-message');
+        this.errorContainer = document.getElementById('error-message')!;
         this.warningsContainer = this.createWarningsContainer();
     }
 
     /**
      * Create warnings container if it doesn't exist
      */
-    createWarningsContainer() {
+    private createWarningsContainer(): HTMLElement {
         let container = document.getElementById('warnings-container');
         if (!container) {
             container = document.createElement('div');
@@ -25,32 +31,33 @@ class ErrorUI {
                 resultsSection.insertBefore(container, resultsSection.firstChild);
             }
         }
-        return container;
+        return container as HTMLElement;
     }
 
     /**
      * Show structured error with detailed information
      */
-    showError(error) {
+    public showError(error: string | ErrorResponse | ProcessingResult | any) {
         if (typeof error === 'string') {
-            // Simple string error
             this.showSimpleError(error);
             return;
         }
 
-        if (error.error) {
+        if (error && error.error) {
             // Structured error from Python
             this.showStructuredError(error.error);
+        } else if (error instanceof Error) {
+            this.showSimpleError(error.message);
         } else {
-            // JavaScript error or unknown format
-            this.showSimpleError(error.message || String(error));
+            // Unknown format
+            this.showSimpleError(String(error));
         }
     }
 
     /**
      * Show simple error message
      */
-    showSimpleError(message) {
+    private showSimpleError(message: string) {
         this.errorContainer.innerHTML = this.createErrorHTML({
             error_type: 'Error',
             message: message,
@@ -63,7 +70,7 @@ class ErrorUI {
     /**
      * Show structured error with full details
      */
-    showStructuredError(errorData) {
+    private showStructuredError(errorData: any) {
         this.errorContainer.innerHTML = this.createStructuredErrorHTML(errorData);
         this.errorContainer.classList.remove('hidden');
         this.scrollToError();
@@ -72,7 +79,7 @@ class ErrorUI {
     /**
      * Create HTML for basic error
      */
-    createErrorHTML(errorData) {
+    private createErrorHTML(errorData: any): string {
         return `
             <div class="error-card">
                 <div class="error-header">
@@ -96,7 +103,7 @@ class ErrorUI {
     /**
      * Create HTML for structured error with details
      */
-    createStructuredErrorHTML(errorData) {
+    private createStructuredErrorHTML(errorData: any): string {
         let html = `
             <div class="error-card">
                 <div class="error-header">
@@ -110,7 +117,6 @@ class ErrorUI {
                 <p class="error-message">${this.escapeHtml(errorData.message)}</p>
         `;
 
-        // Show user action if available
         if (errorData.user_action) {
             html += `
                 <div class="error-action">
@@ -119,7 +125,6 @@ class ErrorUI {
             `;
         }
 
-        // Show details if available
         if (errorData.details && Object.keys(errorData.details).length > 0) {
             html += `<div class="error-details">`;
             html += `<button class="error-details-toggle" onclick="this.nextElementSibling.classList.toggle('hidden')">
@@ -127,32 +132,29 @@ class ErrorUI {
             </button>`;
             html += `<div class="error-details-content hidden">`;
 
-            // Missing columns
             if (errorData.details.missing_columns) {
                 html += `
                     <div class="error-detail-item">
                         <strong>Missing columns:</strong>
                         <ul>
-                            ${errorData.details.missing_columns.map(col => `<li>${this.escapeHtml(col)}</li>`).join('')}
+                            ${errorData.details.missing_columns.map((col: string) => `<li>${this.escapeHtml(col)}</li>`).join('')}
                         </ul>
                     </div>
                 `;
             }
 
-            // Found columns
             if (errorData.details.found_columns && errorData.details.found_columns.length > 0) {
                 html += `
                     <div class="error-detail-item">
                         <strong>Columns found in file:</strong>
                         <ul>
-                            ${errorData.details.found_columns.slice(0, 10).map(col => `<li>${this.escapeHtml(col)}</li>`).join('')}
+                            ${errorData.details.found_columns.slice(0, 10).map((col: string) => `<li>${this.escapeHtml(col)}</li>`).join('')}
                             ${errorData.details.found_columns.length > 10 ? '<li>... and more</li>' : ''}
                         </ul>
                     </div>
                 `;
             }
 
-            // Issue count
             if (errorData.details.issue_count !== undefined) {
                 html += `
                     <div class="error-detail-item">
@@ -161,19 +163,17 @@ class ErrorUI {
                 `;
             }
 
-            // Examples
             if (errorData.details.examples && errorData.details.examples.length > 0) {
                 html += `
                     <div class="error-detail-item">
                         <strong>Examples:</strong>
                         <ul>
-                            ${errorData.details.examples.map(ex => `<li>${this.escapeHtml(String(ex))}</li>`).join('')}
+                            ${errorData.details.examples.map((ex: any) => `<li>${this.escapeHtml(String(ex))}</li>`).join('')}
                         </ul>
                     </div>
                 `;
             }
 
-            // Row counts for InsufficientDataError
             if (errorData.details.initial_count) {
                 html += `
                     <div class="error-detail-item">
@@ -197,7 +197,7 @@ class ErrorUI {
     /**
      * Show data quality messages (warnings and info)
      */
-    showWarnings(qualityData) {
+    public showWarnings(qualityData: any) {
         if (!qualityData ||
             ((!qualityData.warnings || qualityData.warnings.length === 0) &&
                 (!qualityData.info || qualityData.info.length === 0))) {
@@ -207,7 +207,6 @@ class ErrorUI {
 
         let html = '<div class="warnings-card">';
 
-        // Render Warnings
         if (qualityData.warnings && qualityData.warnings.length > 0) {
             html += `
                 <div class="warnings-header">
@@ -221,12 +220,11 @@ class ErrorUI {
                 <p class="warnings-intro">The data was processed successfully, but some quality issues were detected:</p>
             `;
 
-            qualityData.warnings.forEach(warning => {
+            qualityData.warnings.forEach((warning: any) => {
                 html += this.createQualityMessageHTML(warning, 'warning');
             });
         }
 
-        // Render Info
         if (qualityData.info && qualityData.info.length > 0) {
             html += `
                 <div class="info-header ${qualityData.warnings && qualityData.warnings.length > 0 ? 'mt-4' : ''}">
@@ -239,7 +237,7 @@ class ErrorUI {
                 </div>
             `;
 
-            qualityData.info.forEach(info => {
+            qualityData.info.forEach((info: any) => {
                 html += this.createQualityMessageHTML(info, 'info');
             });
         }
@@ -249,10 +247,7 @@ class ErrorUI {
         this.warningsContainer.classList.remove('hidden');
     }
 
-    /**
-     * Create HTML for a single quality message
-     */
-    createQualityMessageHTML(data, type) {
+    private createQualityMessageHTML(data: any, type: string): string {
         return `
             <div class="quality-item ${type}-item">
                 <p class="quality-message">${this.escapeHtml(data.message)}</p>
@@ -260,7 +255,7 @@ class ErrorUI {
                     <details class="quality-examples">
                         <summary>Show examples (${data.examples.length})</summary>
                         <ul>
-                            ${data.examples.map(ex => `<li>${this.escapeHtml(String(ex))}</li>`).join('')}
+                            ${data.examples.map((ex: any) => `<li>${this.escapeHtml(String(ex))}</li>`).join('')}
                         </ul>
                     </details>
                 ` : ''}
@@ -268,48 +263,33 @@ class ErrorUI {
         `;
     }
 
-    /**
-     * Hide error message
-     */
-    hideError() {
+    public hideError() {
         this.errorContainer.classList.add('hidden');
         this.errorContainer.innerHTML = '';
     }
 
-    /**
-     * Hide warnings
-     */
-    hideWarnings() {
+    public hideWarnings() {
         this.warningsContainer.classList.add('hidden');
         this.warningsContainer.innerHTML = '';
     }
 
-    /**
-     * Scroll to error message
-     */
-    scrollToError() {
+    private scrollToError() {
         setTimeout(() => {
             this.errorContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }, 100);
     }
 
-    /**
-     * Escape HTML to prevent XSS
-     */
-    escapeHtml(text) {
+    private escapeHtml(text: string): string {
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
     }
 
-    /**
-     * Clear all error and warning UI
-     */
-    clearAll() {
+    public clearAll() {
         this.hideError();
         this.hideWarnings();
     }
 }
 
-// Singleton instance
-const errorUI = new ErrorUI();
+// Global instance for legacy support if needed, but preferred to import
+export const errorUI = new ErrorUI();
