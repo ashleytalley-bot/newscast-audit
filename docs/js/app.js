@@ -396,7 +396,7 @@ export class NewscastAuditApp {
 
             // Validate timestamps
             if (isNaN(minTimestamp) || isNaN(maxTimestamp)) {
-                console.warn("Invalid dates found for slider:", dates);
+                console.warn("Invalid dates found for slider logic");
                 return;
             }
 
