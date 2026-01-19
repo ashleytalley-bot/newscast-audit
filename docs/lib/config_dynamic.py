@@ -14,7 +14,7 @@ Workflow:
 
 import sys
 from typing import Optional, Dict, List, Tuple
-import yaml  # type: ignore
+import yaml
 
 class Config:
     """
