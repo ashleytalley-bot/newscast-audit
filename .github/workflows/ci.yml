@@ -1,13 +1,25 @@
-name: CI
+name: CI/CD
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
+
+# Permissions for GITHUB_TOKEN
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  build:
+  test-and-build:
     runs-on: ubuntu-latest
     
     steps:
@@ -25,8 +37,7 @@ jobs:
         python -m pip install --upgrade pip
         if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
         
-    - name: Run Type Checks & Build
-      # check_types.sh now includes build.py execution
+    - name: Run Schema Build & Type Checks
       run: |
         chmod +x check_types.sh
         ./check_types.sh
@@ -34,3 +45,27 @@ jobs:
     - name: Run Tests
       run: |
         python -m pytest tests/
+
+    - name: Upload Pages artifact
+      if: github.ref == 'refs/heads/main'
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: 'docs/'
+
+  deploy:
+    needs: test-and-build
+    if: github.ref == 'refs/heads/main'
+    
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
