@@ -179,11 +179,23 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
             df['newscast_date'],
             errors='coerce'
         )
+        
         # Filter out implausible past dates
         mask_invalid_date = df['newscast_date_parsed'].dt.year < 2020
         df.loc[mask_invalid_date, 'newscast_date_parsed'] = pd.NaT
     else:
         df['newscast_date_parsed'] = pd.NaT
+
+    # Fallback: Use 'start_time' if 'newscast_date' is missing/invalid
+    if 'start_time' in df.columns:
+        start_ts = pd.to_datetime(df['start_time'], errors='coerce')
+        # Find rows where we have no valid newscast date BUT we do have a valid start time
+        mask_fill = df['newscast_date_parsed'].isna() & start_ts.notna() & (start_ts.dt.year >= 2020)
+        
+        if mask_fill.any():
+            # Use the date component of start_time
+            df.loc[mask_fill, 'newscast_date_parsed'] = start_ts[mask_fill].dt.floor('D')
+
 
     # Step 4: Convert yes/no to numeric for present metric columns
     present_metrics = [c for c in config.METRIC_COLUMNS if c in df.columns]
