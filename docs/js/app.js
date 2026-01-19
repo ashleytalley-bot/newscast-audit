@@ -420,6 +420,27 @@ export class NewscastAuditApp {
                 maxTimestamp += 259200000; // 3 days
             }
 
+            // Force a minimum range of 3 days to prevent "stuck" slider
+            const DAY_MS = 86400000;
+            let startTimestamp = Number(minTimestamp);
+            let endTimestamp = Number(maxTimestamp);
+
+            // Check if duration is too small (less than 3 days)
+            const range = endTimestamp - startTimestamp;
+            if (range < (3 * DAY_MS)) {
+                console.log(`Date range small (${range / DAY_MS} days). Expanding for usability.`);
+                // Calculate center point
+                const center = (startTimestamp + endTimestamp) / 2;
+                // Expand 2 days in each direction
+                startTimestamp = center - (2 * DAY_MS);
+                endTimestamp = center + (2 * DAY_MS);
+            }
+
+            console.log("Initializing Slider:", {
+                min: new Date(startTimestamp).toISOString(),
+                max: new Date(endTimestamp).toISOString()
+            });
+
             const slider = document.getElementById('date-slider');
 
             // Destroy existing slider if present
@@ -428,23 +449,6 @@ export class NewscastAuditApp {
                 // @ts-ignore
                 slider.noUiSlider.destroy();
             }
-
-            // Force a minimum range of 3 days to prevent "stuck" slider
-            const DAY_MS = 86400000;
-            let startTimestamp = Number(minTimestamp);
-            let endTimestamp = Number(maxTimestamp);
-
-            // Check if duration is too small (less than 3 days)
-            if ((endTimestamp - startTimestamp) < (3 * DAY_MS)) {
-                console.log(`Date range small (${(endTimestamp - startTimestamp) / DAY_MS} days). Expanding for usability.`);
-                // Calculate center point
-                const center = (startTimestamp + endTimestamp) / 2;
-                // Expand 2 days in each direction
-                startTimestamp = center - (2 * DAY_MS);
-                endTimestamp = center + (2 * DAY_MS);
-            }
-
-            console.log("Creating slider with:", { startTimestamp, endTimestamp });
 
             try {
                 // @ts-ignore
@@ -460,14 +464,19 @@ export class NewscastAuditApp {
                     format: {
                         to: function (value) {
                             try {
-                                return new Date(Number(value)).toISOString().split('T')[0];
+                                const ts = Number(value);
+                                if (isNaN(ts)) throw new Error("Value is NaN");
+                                return new Date(ts).toISOString().split('T')[0];
                             } catch (e) {
-                                console.error("Slider Format Error:", e, "Value:", value);
+                                console.error(`Slider 'to' Error: Val=${value} Type=${typeof value}`, e);
                                 return "Invalid Date";
                             }
                         },
                         from: function (value) {
-                            return new Date(value).getTime();
+                            // Safe parsing
+                            const t = new Date(value).getTime();
+                            if (isNaN(t)) return 0;
+                            return t;
                         }
                     }
                 });
