@@ -444,6 +444,8 @@ export class NewscastAuditApp {
                 endTimestamp = center + (2 * DAY_MS);
             }
 
+            console.log("Creating slider with:", { startTimestamp, endTimestamp });
+
             try {
                 // @ts-ignore
                 noUiSlider.create(slider, {
@@ -460,7 +462,8 @@ export class NewscastAuditApp {
                             try {
                                 return new Date(value).toISOString().split('T')[0];
                             } catch (e) {
-                                return new Date().toISOString().split('T')[0];
+                                console.error("Slider Format Error:", e, "Value:", value);
+                                return "Invalid Date";
                             }
                         },
                         from: function (value) {
