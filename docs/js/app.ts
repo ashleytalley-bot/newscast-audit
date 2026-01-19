@@ -451,8 +451,14 @@ export class NewscastAuditApp {
     // UI STATE MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════
 
+    public updateLoadingText(message: string) {
+        if (this.dom.loadingText) {
+            this.dom.loadingText.textContent = message;
+        }
+    }
+
     public showLoading(message: string) {
-        this.dom.loadingText.textContent = message;
+        this.updateLoadingText(message);
         this.dom.loadingIndicator.classList.remove('hidden');
     }
 

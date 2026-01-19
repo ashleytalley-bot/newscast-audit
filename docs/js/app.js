@@ -342,8 +342,13 @@ class NewscastAuditApp {
   // ═══════════════════════════════════════════════════════════════════════════
   // UI STATE MANAGEMENT
   // ═══════════════════════════════════════════════════════════════════════════
+  updateLoadingText(message) {
+    if (this.dom.loadingText) {
+      this.dom.loadingText.textContent = message;
+    }
+  }
   showLoading(message) {
-    this.dom.loadingText.textContent = message;
+    this.updateLoadingText(message);
     this.dom.loadingIndicator.classList.remove("hidden");
   }
   hideLoading() {

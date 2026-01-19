@@ -7,6 +7,25 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 test.describe('File Upload Flow', () => {
+    let errors: string[] = [];
+
+    test.beforeEach(({ page }) => {
+        errors = [];
+        page.on('console', msg => {
+            if (msg.type() === 'error') errors.push(`Console Error: ${msg.text()}`);
+        });
+        page.on('pageerror', exception => {
+            errors.push(`Page Error: ${exception.message}`);
+        });
+    });
+
+    test.afterEach(() => {
+        if (errors.length > 0) {
+            console.error('Errors detected in test:', errors);
+        }
+        expect(errors, `Should have no console or page errors, but found: ${errors.join(', ')}`).toEqual([]);
+    });
+
     test('should upload an Excel file and generate results', async ({ page }) => {
         test.setTimeout(120000); // 2 minutes for Pyodide init
         // 1. Navigate to the app

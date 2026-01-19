@@ -1,36 +1,42 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Newscast Audit App', () => {
-    test('should load without console errors', async ({ page }) => {
-        // 1. Capture console messages
-        const consoleErrors: string[] = [];
+    test('should load without unhandled exceptions', async ({ page }) => {
+        // 1. Capture errors and unhandled exceptions
+        const errors: string[] = [];
         page.on('console', msg => {
             if (msg.type() === 'error') {
-                consoleErrors.push(msg.text());
+                errors.push(`Console Error: ${msg.text()}`);
             }
+        });
+        page.on('pageerror', exception => {
+            errors.push(`Page Error: ${exception.message}`);
         });
 
         // 2. Navigate to the app
         await page.goto('/');
 
-        // 3. Wait for the app title to be visible to ensure basic render
+        // 3. Wait for basic render
         await expect(page.locator('.header-title')).toHaveText('Newscast Audit Report');
 
-        // 4. Wait for potential async initialization errors (Pyodide loading)
-        // We can wait for the loading indicator to disappear or for a specific log
-        // For now, let's wait a reasonable amount of time or for a success signal if valid
-        // Ideally, we check if the file input is clickable, which means overlay is gone?
-        // The loading overlay is #loading-indicator. It starts hidden? 
-        // Let's check app.js: init() runs.
+        // 4. Trigger and wait for initialization to finish
+        // This ensures we catch any background error during initialization
+        await page.evaluate(async () => {
+            // @ts-ignore
+            if (window.app && window.app.pyodideService) {
+                // @ts-ignore
+                await window.app.pyodideService.initialize();
+            }
+        });
 
-        // Let's wait for a bit to let network requests fail if they are going to.
-        await page.waitForTimeout(3000);
+        // Ensure loader is gone
+        await expect(page.locator('#loading-indicator')).toHaveClass(/hidden/, { timeout: 60000 });
 
-        // 5. Assert no errors
-        if (consoleErrors.length > 0) {
-            console.error('Console Errors detected:', consoleErrors);
+        // 5. Assert no errors occurred during the entire lifecycle
+        if (errors.length > 0) {
+            console.error('Errors detected:', errors);
         }
-        expect(consoleErrors).toEqual([]);
+        expect(errors).toEqual([]);
     });
 
     test('should complete initialization', async ({ page }) => {
