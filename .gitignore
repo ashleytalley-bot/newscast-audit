@@ -1,6 +1,7 @@
 *.html
 *.png
 *.xlsx
+!tests/fixtures/*.xlsx
 *.pdf
 *.numbers
 *.css
