@@ -114,6 +114,7 @@ export class ChartRenderer {
      * @param {ConfigPassthrough} config 
      */
     renderWeeklyChart(containerId, weeklyData, config) {
+        const container = document.getElementById(containerId);
         if (!container || !weeklyData) return;
 
         const commonLineProps = {
