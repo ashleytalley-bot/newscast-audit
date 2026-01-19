@@ -25,7 +25,7 @@ class PyodideService {
     }
     console.log("[PyodideService] Loading Pyodide...");
     this.pyodide = await loadPyodide({
-      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/"
+      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
     });
     console.log("[PyodideService] Loading Python packages...");
     await this.pyodide.loadPackage(["pandas", "numpy"]);
