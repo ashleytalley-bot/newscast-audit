@@ -11,6 +11,7 @@ Each step is a focused, single-responsibility module:
 
 from .validate import ValidationStep
 from .clean import CleaningStep
+from .filter import FilteringStep
 from .aggregate import AggregationStep
 from .charts import ChartGenerationStep
 from .export import ExportPreparationStep
@@ -18,6 +19,7 @@ from .export import ExportPreparationStep
 __all__ = [
     "ValidationStep",
     "CleaningStep",
+    "FilteringStep",
     "AggregationStep",
     "ChartGenerationStep",
     "ExportPreparationStep",

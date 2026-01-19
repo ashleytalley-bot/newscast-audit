@@ -20,22 +20,27 @@ class PipelineContext:
     Each step can read from and write to the context.
 
     Attributes:
-        data: The main DataFrame being processed
+        data: The main DataFrame being processed (possibly filtered)
+        full_data: The original unfiltered DataFrame (if filtering active)
         metadata: Dictionary of step outputs and intermediate results
         quality_tracker: Tracks data quality warnings and info
+        options: Configuration options like date range filters
     """
 
-    def __init__(self, data: pd.DataFrame, tracker: Optional[DataQualityTracker] = None):
+    def __init__(self, data: pd.DataFrame, tracker: Optional[DataQualityTracker] = None, options: Optional[Dict[str, Any]] = None):
         """
         Initialize pipeline context.
 
         Args:
             data: Initial DataFrame to process
             tracker: Optional tracker, creates new one if None
+            options: Optional runtime configuration
         """
         self.data = data
+        self.full_data: Optional[pd.DataFrame] = None
         self.metadata: Dict[str, Any] = {}
         self.quality_tracker = tracker if tracker is not None else DataQualityTracker()
+        self.options = options or {}
 
     def set(self, key: str, value: Any) -> None:
         """Store a value in the context."""

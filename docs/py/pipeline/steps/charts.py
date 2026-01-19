@@ -91,8 +91,12 @@ class ChartGenerationStep(PipelineStep):
                     "n": len(sub)
                 })
 
-        # Weekly trend chart
-        weekly_chart = self._generate_weekly_chart(df)
+        # Weekly trend chart (uses full history regardless of filter)
+        history_df = getattr(context, 'full_data', None)
+        if history_df is None or history_df.empty:
+            history_df = df
+            
+        weekly_chart = self._generate_weekly_chart(history_df)
         if weekly_chart:
             # Convert Pydantic model to dict for consistency with other charts
             # (or context expects dicts? The schema calls for WeeklyChart model eventually)
@@ -116,7 +120,10 @@ class ChartGenerationStep(PipelineStep):
                 filter_options.append({
                     "label": "All newscasts | All questions",
                     "dates": base_series["dates"],
-                    "values": [round(v, 1) if pd.notna(v) else None for v in base_series["pct"]]
+                    "values": [round(v, 1) if pd.notna(v) else None for v in base_series["pct"]],
+                    "center_line": base_series["center_line"],
+                    "ucl": base_series["ucl"],
+                    "lcl": base_series["lcl"]
                 })
 
             # Filter by newscast
@@ -126,7 +133,10 @@ class ChartGenerationStep(PipelineStep):
                     filter_options.append({
                         "label": f"Newscast: {nc}",
                         "dates": series["dates"],
-                        "values": [round(v, 1) if pd.notna(v) else None for v in series["pct"]]
+                        "values": [round(v, 1) if pd.notna(v) else None for v in series["pct"]],
+                        "center_line": series["center_line"],
+                        "ucl": series["ucl"],
+                        "lcl": series["lcl"]
                     })
 
             # Filter by question
@@ -136,7 +146,10 @@ class ChartGenerationStep(PipelineStep):
                     filter_options.append({
                         "label": f"Question: {q.replace('_', ' ').title()}",
                         "dates": series["dates"],
-                        "values": [round(v, 1) if pd.notna(v) else None for v in series["pct"]]
+                        "values": [round(v, 1) if pd.notna(v) else None for v in series["pct"]],
+                        "center_line": series["center_line"],
+                        "ucl": series["ucl"],
+                        "lcl": series["lcl"]
                     })
 
         # Update context with charts
@@ -192,9 +205,58 @@ class ChartGenerationStep(PipelineStep):
         # Round values
         values = [round(v, 1) for v in values]
 
+        # --- P-Chart Calculations ---
+        # 1. Calculate Center Line (CL) = Total Yes / Total Opportunities across all weeks
+        # We need the count of metrics evaluated per week to calculate sigma.
+        # Approximation: weekly_metrics is average %, but we need raw counts or N.
+        # We can get N by resampling count.
+        
+        # Count of non-null metric values per week
+        weekly_counts = weekly[metric_cols].resample('W-MON').count().sum(axis=1)
+        # Filter to same weeks as overall
+        weekly_counts = weekly_counts.loc[weekly_overall.index]
+        
+        # Calculate P-bar (Center Line)
+        # To be precise, P-bar is (Sum of Yes) / (Sum of N).
+        # We have mean % (weekly_overall) and N (weekly_counts).
+        # Reconstruct "Yes Count": (Mean % / 100) * N
+        estimated_yes = (weekly_overall / 100) * weekly_counts
+        total_yes = estimated_yes.sum()
+        total_n = weekly_counts.sum()
+        
+        p_bar = total_yes / total_n if total_n > 0 else 0
+        center_line = round(p_bar * 100, 1)
+
+        # 2. Calculate Control Limits per week (Stepped limits)
+        # Sigma_i = sqrt( p_bar * (1 - p_bar) / n_i )
+        # UCL_i = p_bar + 3 * Sigma_i
+        # LCL_i = p_bar - 3 * Sigma_i
+        
+        ucl_values = []
+        lcl_values = []
+        
+        for n_i in weekly_counts.values:
+            if n_i > 0:
+                sigma_i = (p_bar * (1 - p_bar) / n_i) ** 0.5
+                ucl = (p_bar + 3 * sigma_i) * 100
+                lcl = (p_bar - 3 * sigma_i) * 100
+                
+                # Clamp limits
+                ucl = min(ucl, 100.0)
+                lcl = max(lcl, 0.0)
+                
+                ucl_values.append(round(ucl, 1))
+                lcl_values.append(round(lcl, 1))
+            else:
+                ucl_values.append(None)
+                lcl_values.append(None)
+
         return WeeklyChart(
             dates=dates,
             values=values,
-            full_dates=full_dates
+            full_dates=full_dates,
+            center_line=center_line,
+            ucl=ucl_values,
+            lcl=lcl_values
         )
 

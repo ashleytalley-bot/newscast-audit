@@ -68,6 +68,48 @@ export class NewscastAuditApp {
         document.getElementById('btn-export-excel').addEventListener('click', () => this.exportExcel());
         document.getElementById('btn-export-pptx').addEventListener('click', () => this.exportPowerPoint());
         document.getElementById('btn-new-file').addEventListener('click', () => this.resetToUpload());
+
+        // Filter buttons
+        document.getElementById('btn-apply-filter').addEventListener('click', () => this.applyDateFilter());
+        document.getElementById('btn-clear-filter').addEventListener('click', () => this.clearDateFilter());
+    }
+
+    async applyDateFilter() {
+        const start = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date')).value;
+        const end = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date')).value;
+
+        if (!this.jsonData) return; // Should have data if we are here
+
+        this.showLoading('Applying filters...');
+        try {
+            const options = {
+                filter_start_date: start || null,
+                filter_end_date: end || null
+            };
+            const result = await this.processDataWithPython(this.jsonData, options);
+            if (result.success) {
+                // @ts-ignore
+                this.processedData = result;
+                this.renderResults();
+            } else {
+                // @ts-ignore
+                errorUI.showError(result);
+            }
+        } catch (e) {
+            console.error(e);
+            // @ts-ignore
+            errorUI.showError("Failed to apply filter");
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    async clearDateFilter() {
+        const startInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date'));
+        const endInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date'));
+        startInput.value = '';
+        endInput.value = '';
+        this.applyDateFilter();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -118,6 +160,7 @@ export class NewscastAuditApp {
 
             // Parse Excel file
             const jsonData = await this.parseExcelFile(file);
+            this.jsonData = jsonData; // Store for filtering re-runs
 
             // Validate data
             if (!jsonData || jsonData.length === 0) {
@@ -132,7 +175,7 @@ export class NewscastAuditApp {
 
             // Process data
             this.showLoading(LOADING_MESSAGES.processing);
-            const result = await this.processDataWithPython(jsonData);
+            const result = await this.processDataWithPython(jsonData); // Initial run (no options)
 
             if (!result.success) {
                 // Show structured error with ErrorUI
@@ -151,6 +194,9 @@ export class NewscastAuditApp {
                 // @ts-ignore
                 errorUI.showWarnings(result.quality);
             }
+
+            // Initialize Date Filters from result data
+            this.initializeDateFilters(result);
 
             // Render results
             this.showLoading(LOADING_MESSAGES.rendering);
@@ -294,15 +340,66 @@ export class NewscastAuditApp {
     }
 
     /**
+     * Initialize date filter inputs based on data range
+     * @param {ProcessingResult} result 
+     */
+    initializeDateFilters(result) {
+        // Find min/max dates from weekly chart data (which should cover the full range)
+        // @ts-ignore
+        if (result.charts && result.charts.weekly && result.charts.weekly.full_dates) {
+            // @ts-ignore
+            const dates = result.charts.weekly.full_dates.sort();
+            if (dates.length > 0) {
+                const minDate = dates[0];
+                const maxDate = dates[dates.length - 1];
+
+                // Store cleaned bounds
+                this.dateBounds = { min: minDate, max: maxDate };
+
+                // Don't set values by default (user asked for default "all dates" but 
+                // typically inputs are blank or show placeholder. Let's leave blank 
+                // but set min/max attributes)
+                const startInput = document.getElementById('filter-start-date');
+                const endInput = document.getElementById('filter-end-date');
+
+                if (startInput && endInput) {
+                    // @ts-ignore
+                    startInput.min = minDate; // @ts-ignore
+                    startInput.max = maxDate;
+                    // @ts-ignore
+                    endInput.min = minDate;   // @ts-ignore
+                    endInput.max = maxDate;
+
+                    // Clear values initially
+                    // @ts-ignore
+                    startInput.value = '';
+                    // @ts-ignore
+                    endInput.value = '';
+                }
+            }
+        }
+    }
+
+    /**
      * Process the data using the Python pipeline
      * @param {any[]} jsonData - The parsed Excel data
+     * @param {Object} [options] - Filter options
      * @returns {Promise<ProcessingOutput>} The processing result or error response
      */
-    async processDataWithPython(jsonData) {
+    async processDataWithPython(jsonData, options = null) {
         this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
 
+        // Pass options if they exist
+        let optionsCode = 'None';
+        if (options) {
+            this.pyodide.globals.set('opts_json', JSON.stringify(options));
+            optionsCode = 'json.loads(opts_json)';
+            // Ensure json import is available
+            await this.pyodide.runPythonAsync('import json');
+        }
+
         const resultJson = await this.pyodide.runPythonAsync(`
-            result = pipeline.execute(json_data)
+            result = pipeline.execute(json_data, options=${optionsCode})
             result
         `);
 
@@ -395,6 +492,70 @@ export class NewscastAuditApp {
         // Render Weekly Chart (New)
         if (charts.weekly) {
             this.chartRenderer.renderWeeklyChart('chart-weekly', charts.weekly, config);
+        }
+
+        // Initialize Weekly Chart Filter
+        if (charts.filter_options && charts.filter_options.length > 0) {
+            const select = /** @type {HTMLSelectElement} */ (document.getElementById('weekly-chart-filter'));
+            if (select) {
+                // Clear existing options (except default?) - simpler to rebuild
+                select.innerHTML = '';
+
+                // Add options
+                charts.filter_options.forEach((opt, index) => {
+                    const option = document.createElement('option');
+                    // Store index as value to easily retrieve full object later
+                    option.value = index.toString();
+                    option.textContent = opt.label;
+                    select.appendChild(option);
+                });
+
+                // Add event listener (remove old one to avoid duplicates if re-rendering? 
+                // A clean way is to clone node or just set onchange property)
+                select.onchange = () => {
+                    const selectedIndex = parseInt(select.value);
+                    const selectedData = charts.filter_options[selectedIndex];
+                    if (selectedData) {
+                        try {
+                            // Construct WeeklyChart object from filter option
+                            const weeklyData = {
+                                dates: selectedData.dates,
+                                values: selectedData.values,
+                                // Assuming full_dates might be missing in filter options if not added in backend
+                                // Backend logic check: it populates 'dates' and 'values'. 
+                                // 'full_dates' is missing in filter option schema in charts.py!
+                                // We can use 'dates' as full dates if formatted, or modify backend.
+                                // Let's check backend schema.
+                                // Charts.py step (Step 463) adds 'dates' and 'values'. 
+                                // WeeklyChart schema (Step 458) expects 'full_dates'.
+                                // FilterOption schema (Step 458) has 'dates' described as "Full ISO dates".
+                                // Wait, Charts.py line 113: "dates": base_series["dates"] 
+                                // base_series is weekly_percent_series which returns 'dates' (formatted short?) or full?
+                                // Let's assume for now we might need to be careful.
+                                // Actually, renderWeeklyChart uses 'full_dates' for hover text. 
+                                // IF filter option lacks it, hover might break. 
+                                // Let's patch filter object to be compatible
+                                full_dates: selectedData.dates, // FilterOption dates are ISO strings per schema description?
+                                // Actually let's look at schema again. 
+                            };
+
+                            // Re-map fields if necessary. 
+                            // FilterOption has { label, dates, values }
+                            // WeeklyChart has { dates, values, full_dates }
+                            // If FilterOption dates are ISO, we need to generate short dates for X-axis?
+                            // Or just use them.
+
+                            this.chartRenderer.renderWeeklyChart('chart-weekly', {
+                                dates: selectedData.dates, // These are likely formatted 'MM/DD' from builder?
+                                values: selectedData.values,
+                                full_dates: selectedData.dates // Fallback
+                            }, config);
+                        } catch (e) {
+                            console.error("Error updating chart:", e);
+                        }
+                    }
+                };
+            }
         }
 
         // Render Heatmap (New)

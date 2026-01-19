@@ -160,46 +160,66 @@ export class ChartRenderer {
         const container = document.getElementById(containerId);
         if (!container || !perNewscastData || perNewscastData.length === 0) return;
 
-        // X-axis: Metrics (Labels)
-        // Y-axis: Newscasts
-        // Z-axis: Values (Scores)
+        // Find max N for opacity scaling
+        const maxN = Math.max(...perNewscastData.map(d => d.n));
 
-        // Assuming all newscasts have same metrics in same order
-        const metrics = perNewscastData[0].labels;
-        const newscasts = perNewscastData.map(d => d.newscast);
-        const zValues = perNewscastData.map(d => d.values);
+        // Extract all newscast names for Y-axis ordering
+        // (Reverse them so the first item in array appears at top of chart)
+        const allNewscasts = perNewscastData.map(d => d.newscast).reverse();
 
-        const data = [{
-            z: zValues,
-            x: metrics,
-            y: newscasts,
-            type: 'heatmap',
-            colorscale: [
-                [0, '#d32f2f'],   // Red for low
-                [0.5, '#fbc02d'], // Yellow for mid
-                [1, '#388e3c']    // Green for high
-            ],
-            zmin: 0,
-            zmax: 100,
-            hoverongaps: false
-        }];
+        // Create one trace per newscast to allow individual opacity control
+        const traces = perNewscastData.map((data, i) => {
+            // Normalize N (min 0.3 opacity to ensure visibility)
+            const normalizedN = maxN > 0 ? (data.n / maxN) : 1;
+            const opacity = 0.3 + (0.7 * normalizedN);
+
+            return {
+                z: [data.values],
+                x: data.labels,
+                y: [data.newscast],
+                type: 'heatmap',
+                colorscale: [
+                    [0, '#d32f2f'],   // Red for low
+                    [0.5, '#fbc02d'], // Yellow for mid
+                    [1, '#388e3c']    // Green for high
+                ],
+                zmin: 0,
+                zmax: 100,
+                opacity: opacity,
+                showscale: i === 0, // Only show colorbar for the first trace
+                hoverongaps: false,
+                hovertemplate:
+                    `Newscast: %{y}<br>` +
+                    `Metric: %{x}<br>` +
+                    `Yes: %{z}%<br>` +
+                    `n: ${data.n}<extra></extra>`
+            };
+        });
 
         const layout = {
-            title: 'Performance Heatmap',
+            title: 'Performance Heatmap (Opacity based on Sample Size)',
             xaxis: {
                 tickangle: -45,
-                automargin: true
+                automargin: true,
+                side: 'top' // Move labels to top for better readability
             },
             yaxis: {
-                automargin: true
+                automargin: true,
+                categoryarray: allNewscasts,
+                categoryorder: 'array'
             },
             margin: {
-                l: 100, r: 20, b: 100, t: 50
+                l: 120, r: 20, b: 50, t: 150 // Increased top margin for labels
+            },
+            // Ensure traces share the same comparison scale
+            coloraxis: {
+                cmin: 0,
+                cmax: 100
             }
         };
 
         // @ts-ignore
-        Plotly.newPlot(containerId, data, layout, { responsive: CHART_DEFAULTS.responsive });
+        Plotly.newPlot(containerId, traces, layout, { responsive: CHART_DEFAULTS.responsive });
     }
 
     /**

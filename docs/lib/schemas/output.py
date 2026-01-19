@@ -97,6 +97,18 @@ class WeeklyChart(BaseModel):
     full_dates: List[str] = Field(
         description="Full ISO date strings (YYYY-MM-DD)"
     )
+    center_line: Optional[float] = Field(
+        default=None,
+        description="Process center line (mean)"
+    )
+    ucl: Optional[List[Optional[float]]] = Field(
+        default=None,
+        description="Upper Control Limit values"
+    )
+    lcl: Optional[List[Optional[float]]] = Field(
+        default=None,
+        description="Lower Control Limit values"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -120,6 +132,18 @@ class FilterOption(BaseModel):
     )
     values: List[Optional[float]] = Field(
         description="Weekly percentages for this filter"
+    )
+    center_line: Optional[float] = Field(
+        default=None,
+        description="Process center line (mean)"
+    )
+    ucl: Optional[List[Optional[float]]] = Field(
+        default=None,
+        description="Upper Control Limit values"
+    )
+    lcl: Optional[List[Optional[float]]] = Field(
+        default=None,
+        description="Lower Control Limit values"
     )
 
 

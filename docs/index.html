@@ -69,16 +69,26 @@
 
             <!-- Export Buttons -->
             <div class="export-bar">
-                <button id="btn-new-file" class="btn btn-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                        <polyline points="17 8 12 3 7 8" />
-                        <line x1="12" y1="3" x2="12" y2="15" />
-                    </svg>
-                    Upload New File
-                </button>
-                <div class="export-buttons">
+                <div class="filter-controls d-flex align-items-center gap-2">
+                    <label class="mb-0 fw-bold text-muted small">Date Range:</label>
+                    <input type="date" id="filter-start-date" class="form-control form-control-sm" style="width: auto;">
+                    <span class="text-muted">-</span>
+                    <input type="date" id="filter-end-date" class="form-control form-control-sm" style="width: auto;">
+                    <button id="btn-apply-filter" class="btn btn-sm btn-outline-primary">Apply</button>
+                    <button id="btn-clear-filter" class="btn btn-sm btn-outline-secondary"
+                        title="Reset to all dates">×</button>
+                </div>
+
+                <div class="export-buttons ms-auto">
+                    <button id="btn-new-file" class="btn btn-secondary me-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="17 8 12 3 7 8" />
+                            <line x1="12" y1="3" x2="12" y2="15" />
+                        </svg>
+                        New File
+                    </button>
                     <button id="btn-export-excel" class="btn btn-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -88,7 +98,7 @@
                             <line x1="16" y1="17" x2="8" y2="17" />
                             <polyline points="10 9 9 9 8 9" />
                         </svg>
-                        Download Excel
+                        Excel
                     </button>
                     <button id="btn-export-pptx" class="btn btn-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
@@ -97,7 +107,7 @@
                             <line x1="8" y1="21" x2="16" y2="21" />
                             <line x1="12" y1="17" x2="12" y2="21" />
                         </svg>
-                        Download PowerPoint
+                        PPT
                     </button>
                 </div>
             </div>
@@ -130,7 +140,15 @@
                 </div>
 
                 <div class="chart-card full-width">
-                    <h3>Weekly Trend Analysis</h3>
+                    <div class="card-header d-flex justify-content-between align-items-center mb-3">
+                        <h3 class="mb-0">Weekly Trend Analysis</h3>
+                        <div class="chart-controls">
+                            <select id="weekly-chart-filter" class="form-select form-select-sm"
+                                style="min-width: 250px;">
+                                <option value="default">All Newscasts | All Metrics</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="chart-weekly" class="chart-container"></div>
                 </div>
 

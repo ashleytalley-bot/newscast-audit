@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 import json
 import pandas as pd
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from pydantic import ValidationError
 
 from lib.config_dynamic import get_config
@@ -30,6 +30,7 @@ from .base import PipelineStep, PipelineContext
 from .steps import (
     ValidationStep,
     CleaningStep,
+    FilteringStep,
     AggregationStep,
     ChartGenerationStep,
     ExportPreparationStep,
@@ -43,9 +44,10 @@ class ProcessingPipeline:
     Executes steps in sequence:
     1. ValidationStep - Validate input structure
     2. CleaningStep - Clean and normalize data
-    3. AggregationStep - Build summary tables
-    4. ChartGenerationStep - Generate chart data
-    5. ExportPreparationStep - Prepare export data
+    3. FilteringStep - Filter data (if options provided)
+    4. AggregationStep - Build summary tables
+    5. ChartGenerationStep - Generate chart data
+    6. ExportPreparationStep - Prepare export data
 
     Returns JSON response with results or structured errors.
     """
@@ -55,17 +57,19 @@ class ProcessingPipeline:
         self.steps: list[PipelineStep] = [
             ValidationStep(),
             CleaningStep(),
+            FilteringStep(),
             AggregationStep(),
             ChartGenerationStep(),
             ExportPreparationStep(),
         ]
 
-    def execute(self, json_str: str) -> str:
+    def execute(self, json_str: str, options: Optional[Dict[str, Any]] = None) -> str:
         """
         Execute the full processing pipeline.
 
         Args:
             json_str: JSON string containing array of survey row objects
+            options: Optional configuration (e.g., filters)
 
         Returns:
             JSON string with either:
@@ -93,7 +97,7 @@ class ProcessingPipeline:
                 )
 
             # Create pipeline context
-            context = PipelineContext(df_raw, tracker=quality_tracker)
+            context = PipelineContext(df_raw, tracker=quality_tracker, options=options)
 
             # Execute each step in sequence
             for step in self.steps:

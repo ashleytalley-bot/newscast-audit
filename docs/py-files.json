@@ -17,5 +17,6 @@
   "py/pipeline/steps/charts.py",
   "py/pipeline/steps/clean.py",
   "py/pipeline/steps/export.py",
+  "py/pipeline/steps/filter.py",
   "py/pipeline/steps/validate.py"
 ]

@@ -78,11 +78,17 @@ class AggregationStep(PipelineStep):
         # Build recent week table (if dates available)
         recent_df = None
         recent_week_start = None
-        if 'newscast_date_parsed' in df.columns and df['newscast_date_parsed'].notna().any():
+
+        # Use full_data if available (to ignore global filters for this specific table), else current data
+        history_df = getattr(context, 'full_data', None)
+        if history_df is None or history_df.empty:
+            history_df = df
+
+        if 'newscast_date_parsed' in history_df.columns and history_df['newscast_date_parsed'].notna().any():
             try:
-                max_date = df['newscast_date_parsed'].max()
+                max_date = history_df['newscast_date_parsed'].max()
                 week_start = max_date - pd.Timedelta(days=max_date.weekday())
-                recent = df[df['newscast_date_parsed'] >= week_start]
+                recent = history_df[history_df['newscast_date_parsed'] >= week_start]
                 if not recent.empty:
                     recent_df = build_yes_percent_table(recent, metric_columns)
                     recent_week_start = week_start.strftime('%B %d, %Y')

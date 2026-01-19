@@ -125,12 +125,39 @@ def weekly_percent_series(df: pd.DataFrame, metric_columns: List[str],
         data['score'] = data[cols[0]]
         
     weekly = data.groupby('week_start')['score'].mean() * 100
+    weekly_n = data.groupby('week_start')['score'].count() # Count of valid scores per week
     
     if weekly.empty:
         return None
         
+    # Calculate Center Line (P-bar) for this specific series
+    # P-bar = Sum(Total Score Points) / Sum(Total N)
+    # Using the mean score per row assumption:
+    p_bar = data['score'].mean()
+    center_line = round(p_bar * 100, 1)
+    
+    # Calculate Control Limits
+    ucl_values = []
+    lcl_values = []
+    
+    for n_i in weekly_n.values:
+        if n_i > 0:
+            sigma_i = (p_bar * (1 - p_bar) / n_i) ** 0.5
+            ucl = (p_bar + 3 * sigma_i) * 100
+            lcl = (p_bar - 3 * sigma_i) * 100
+            
+            ucl_values.append(round(min(ucl, 100.0), 1))
+            lcl_values.append(round(max(lcl, 0.0), 1))
+        else:
+            ucl_values.append(None)
+            lcl_values.append(None)
+
     return {
         "dates": [d.strftime('%m/%d') for d in weekly.index],
         "pct": weekly.values.tolist(),
-        "full_dates": [d.strftime('%Y-%m-%d') for d in weekly.index]
+        "full_dates": [d.strftime('%Y-%m-%d') for d in weekly.index],
+        "n": weekly_n.values.tolist(),
+        "center_line": center_line,
+        "ucl": ucl_values,
+        "lcl": lcl_values
     }
