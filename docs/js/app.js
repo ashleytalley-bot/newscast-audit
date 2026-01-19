@@ -402,46 +402,36 @@ export class NewscastAuditApp {
         }
 
         if (minTimestamp && maxTimestamp) {
-            console.log("Slider Setup:", {
-                min: new Date(minTimestamp).toISOString().split('T')[0],
-                max: new Date(maxTimestamp).toISOString().split('T')[0],
-                minT: minTimestamp,
-                maxT: maxTimestamp
-            });
-
-            // Force a minimum range of 3 days
+            // Clean up times to midnight for clean day math
+            const minDate = new Date(minTimestamp).setHours(0, 0, 0, 0);
+            const maxDate = new Date(maxTimestamp).setHours(0, 0, 0, 0);
             const DAY_MS = 86400000;
-            if (maxTimestamp - minTimestamp < (3 * DAY_MS)) {
-                const center = (minTimestamp + maxTimestamp) / 2;
-                minTimestamp = center - (2 * DAY_MS);
-                maxTimestamp = center + (2 * DAY_MS);
-            }
+            const totalDays = Math.round((maxDate - minDate) / DAY_MS);
+
+            console.log("Slider Setup (Refined):", {
+                minDateStr: new Date(minDate).toISOString().split('T')[0],
+                maxDateStr: new Date(maxDate).toISOString().split('T')[0],
+                totalDays: totalDays
+            });
 
             const slider = document.getElementById('date-slider');
             const startInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date'));
             const endInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date'));
 
-            // Default handles to full range
-            let handleStart = minTimestamp;
-            let handleEnd = maxTimestamp;
+            // Default handles
+            let dayStart = 0;
+            let dayEnd = totalDays;
 
-            // Persistence: If handles already have values, try to preserve them
+            // Persistence
             if (startInput && startInput.value && endInput && endInput.value) {
-                const currentStart = new Date(startInput.value).getTime();
-                const currentEnd = new Date(endInput.value).getTime();
+                const curStart = new Date(startInput.value).setHours(0, 0, 0, 0);
+                const curEnd = new Date(endInput.value).setHours(0, 0, 0, 0);
 
-                // Only preserve if they are within the current valid range
-                if (!isNaN(currentStart) && !isNaN(currentEnd) && currentStart >= minTimestamp && currentEnd <= maxTimestamp) {
-                    handleStart = currentStart;
-                    handleEnd = currentEnd;
-                    console.log("Preserving handles:", { handleStart: startInput.value, handleEnd: endInput.value });
+                if (!isNaN(curStart) && !isNaN(curEnd)) {
+                    dayStart = Math.max(0, Math.round((curStart - minDate) / DAY_MS));
+                    dayEnd = Math.min(totalDays, Math.round((curEnd - minDate) / DAY_MS));
                 }
             }
-
-            console.log("Final Slider config:", {
-                range: [new Date(minTimestamp).toISOString().split('T')[0], new Date(maxTimestamp).toISOString().split('T')[0]],
-                handles: [new Date(handleStart).toISOString().split('T')[0], new Date(handleEnd).toISOString().split('T')[0]]
-            });
 
             // Destroy existing slider if present
             // @ts-ignore
@@ -450,62 +440,57 @@ export class NewscastAuditApp {
                 slider.noUiSlider.destroy();
             }
 
+            // Set flag to prevent auto-filter during init
+            this.isInitializingSlider = true;
+
             try {
                 // @ts-ignore
                 noUiSlider.create(slider, {
-                    start: [handleStart, handleEnd],
+                    start: [dayStart, dayEnd],
                     connect: true,
                     behaviour: 'drag-tap',
                     range: {
-                        'min': minTimestamp,
-                        'max': maxTimestamp
+                        'min': 0,
+                        'max': totalDays
                     },
-                    step: 86400000, // 1 day
-                    format: {
-                        to: function (value) {
-                            try {
-                                const ts = Number(value);
-                                if (isNaN(ts)) throw new Error("Value is NaN");
-                                return new Date(ts).toISOString().split('T')[0];
-                            } catch (e) {
-                                console.error(`Slider 'to' Error: Val=${value} Type=${typeof value}`, e);
-                                return "Invalid Date";
-                            }
-                        },
-                        from: function (value) {
-                            // Safe parsing
-                            const t = new Date(value).getTime();
-                            if (isNaN(t)) return 0;
-                            return t;
-                        }
-                    }
+                    step: 1
                 });
 
                 const dateValues = document.getElementById('slider-values');
-                const startInput = document.getElementById('filter-start-date');
-                const endInput = document.getElementById('filter-end-date');
 
                 // @ts-ignore
-                slider.noUiSlider.on('update', function (values, handle) {
-                    dateValues.innerHTML = `${values[0]}  —  ${values[1]}`;
+                slider.noUiSlider.on('update', (values, handle) => {
+                    const startDay = Math.round(Number(values[0]));
+                    const endDay = Math.round(Number(values[1]));
 
-                    if (handle === 0) {
-                        // @ts-ignore
-                        startInput.value = values[0];
-                    } else {
-                        // @ts-ignore
-                        endInput.value = values[1];
-                    }
+                    const dStart = new Date(minDate + (startDay * DAY_MS)).toISOString().split('T')[0];
+                    const dEnd = new Date(minDate + (endDay * DAY_MS)).toISOString().split('T')[0];
+
+                    dateValues.innerHTML = `${dStart}  —  ${dEnd}`;
+
+                    if (handle === 0) startInput.value = dStart;
+                    else endInput.value = dEnd;
                 });
 
                 // Auto-apply filter when handle is released
                 // @ts-ignore
                 slider.noUiSlider.on('change', () => {
+                    if (this.isInitializingSlider) {
+                        console.log("Slider changed during init. Skipping auto-filter.");
+                        return;
+                    }
                     console.log("Slider released. Auto-applying filter...");
                     this.applyDateFilter();
                 });
+
+                // Reset flag after small delay to ensure all 'update' events have settled
+                setTimeout(() => {
+                    this.isInitializingSlider = false;
+                    console.log("Slider initialization complete.");
+                }, 100);
             } catch (err) {
                 console.error("Slider creation failed:", err);
+                this.isInitializingSlider = false;
             }
         }
     }
