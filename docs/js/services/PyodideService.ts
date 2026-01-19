@@ -67,8 +67,10 @@ export class PyodideService {
 
         console.log('[PyodideService] Bootstrapping Python environment...');
 
-        // 1. Ensure lib directory exists
-        this.pyodide.FS.mkdir('/lib');
+        // 1. Create robust directory structure (sandboxed in /app)
+        // We use /app to avoid conflicts with system /lib or /bin
+        this.pyodide.FS.mkdir('/app');
+        this.pyodide.FS.mkdir('/app/lib');
 
         // 2. Fetch and write bootstrap.py manually (it's the seed)
         try {
@@ -76,7 +78,9 @@ export class PyodideService {
             const response = await fetch(`lib/bootstrap.py?t=${timestamp}`);
             if (!response.ok) throw new Error(`Failed to load bootstrap.py: ${response.status}`);
             const content = await response.text();
-            this.pyodide.FS.writeFile("/lib/bootstrap.py", content);
+
+            // Write to /app/lib/bootstrap.py so it matches the package structure 'lib.bootstrap'
+            this.pyodide.FS.writeFile("/app/lib/bootstrap.py", content);
         } catch (err) {
             console.error("[PyodideService] Failed to load bootstrap.py:", err);
             throw err;
@@ -85,6 +89,17 @@ export class PyodideService {
         // 3. Run bootstrap to install everything else from manifest
         try {
             await this.pyodide.runPythonAsync(`
+                import sys
+                import os
+                
+                # Setup sandbox environment
+                app_root = "/app"
+                if app_root not in sys.path:
+                    sys.path.insert(0, app_root)
+                
+                # Change to app root so relative file writes land in /app
+                os.chdir(app_root)
+
                 import lib.bootstrap
                 await lib.bootstrap.install_assets('py-files.json')
             `);
