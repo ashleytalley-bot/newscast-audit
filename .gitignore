@@ -16,8 +16,10 @@ __pycache__/
 !docs/
 !docs/**
 
-__pycache__/
-*.pyc
+# Allow internal scripts and test fixtures
+!scripts/
+!scripts/**
+!tests/**/*.js
 
 node_modules/
 
