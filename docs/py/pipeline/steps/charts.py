@@ -152,15 +152,20 @@ class ChartGenerationStep(PipelineStep):
                         "lcl": series["lcl"]
                     })
 
-        # Update context with charts
+        # Calculate ranges for debug
+        min_date_str = history_df['newscast_date_parsed'].min().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
+        max_date_str = history_df['newscast_date_parsed'].max().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
+        
+        print(f"DEBUG: Pipeline sending date_range: min={min_date_str}, max={max_date_str}")
+
         context.set('charts', {
             'overall': overall_chart,
             'per_newscast': per_newscast_charts,
             'weekly': weekly_chart_dict,
             'filter_options': filter_options,
             'date_range': {
-                'min': history_df['newscast_date_parsed'].min().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None,
-                'max': history_df['newscast_date_parsed'].max().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
+                'min': min_date_str,
+                'max': max_date_str
             }
         })
 

@@ -402,29 +402,46 @@ export class NewscastAuditApp {
         }
 
         if (minTimestamp && maxTimestamp) {
-            // Handle single-date case (min == max) by adding a buffer
-            if (minTimestamp === maxTimestamp) {
-                minTimestamp -= 259200000; // 3 days
-                maxTimestamp += 259200000; // 3 days
-            }
+            console.log("Slider Setup:", {
+                min: new Date(minTimestamp).toISOString().split('T')[0],
+                max: new Date(maxTimestamp).toISOString().split('T')[0],
+                minT: minTimestamp,
+                maxT: maxTimestamp
+            });
 
-            // Force a minimum range of 3 days to prevent "stuck" slider
+            // Force a minimum range of 3 days
             const DAY_MS = 86400000;
-            let startTimestamp = Number(minTimestamp);
-            let endTimestamp = Number(maxTimestamp);
-
-            // Check if duration is too small (less than 3 days)
-            const range = endTimestamp - startTimestamp;
-            if (range < (3 * DAY_MS)) {
-                console.log(`Date range small (${range / DAY_MS} days). Expanding for usability.`);
-                // Calculate center point
-                const center = (startTimestamp + endTimestamp) / 2;
-                // Expand 2 days in each direction
-                startTimestamp = center - (2 * DAY_MS);
-                endTimestamp = center + (2 * DAY_MS);
+            if (maxTimestamp - minTimestamp < (3 * DAY_MS)) {
+                const center = (minTimestamp + maxTimestamp) / 2;
+                minTimestamp = center - (2 * DAY_MS);
+                maxTimestamp = center + (2 * DAY_MS);
             }
 
             const slider = document.getElementById('date-slider');
+            const startInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-start-date'));
+            const endInput = /** @type {HTMLInputElement} */ (document.getElementById('filter-end-date'));
+
+            // Default handles to full range
+            let handleStart = minTimestamp;
+            let handleEnd = maxTimestamp;
+
+            // Persistence: If handles already have values, try to preserve them
+            if (startInput && startInput.value && endInput && endInput.value) {
+                const currentStart = new Date(startInput.value).getTime();
+                const currentEnd = new Date(endInput.value).getTime();
+
+                // Only preserve if they are within the current valid range
+                if (!isNaN(currentStart) && !isNaN(currentEnd) && currentStart >= minTimestamp && currentEnd <= maxTimestamp) {
+                    handleStart = currentStart;
+                    handleEnd = currentEnd;
+                    console.log("Preserving handles:", { handleStart: startInput.value, handleEnd: endInput.value });
+                }
+            }
+
+            console.log("Final Slider config:", {
+                range: [new Date(minTimestamp).toISOString().split('T')[0], new Date(maxTimestamp).toISOString().split('T')[0]],
+                handles: [new Date(handleStart).toISOString().split('T')[0], new Date(handleEnd).toISOString().split('T')[0]]
+            });
 
             // Destroy existing slider if present
             // @ts-ignore
@@ -436,12 +453,12 @@ export class NewscastAuditApp {
             try {
                 // @ts-ignore
                 noUiSlider.create(slider, {
-                    start: [startTimestamp, endTimestamp],
+                    start: [handleStart, handleEnd],
                     connect: true,
                     behaviour: 'drag-tap',
                     range: {
-                        'min': startTimestamp,
-                        'max': endTimestamp
+                        'min': minTimestamp,
+                        'max': maxTimestamp
                     },
                     step: 86400000, // 1 day
                     format: {
