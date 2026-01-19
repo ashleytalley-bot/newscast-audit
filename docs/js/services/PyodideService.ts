@@ -58,38 +58,40 @@ export class PyodideService {
     }
 
     /**
-     * Load Python files from the manifest.
+     * Load Python files from the manifest using the bootstrap module.
      */
     private async loadPythonFiles(): Promise<void> {
         if (!this.pyodide) {
             throw new Error('Pyodide not initialized');
         }
 
-        // Create directory structure
-        this.pyodide.FS.mkdir('/lib');
-        this.pyodide.FS.mkdir('/py');
-        this.pyodide.FS.mkdir('/py/pipeline');
-        this.pyodide.FS.mkdir('/py/pipeline/steps');
+        console.log('[PyodideService] Bootstrapping Python environment...');
 
-        // Fetch manifest
-        let manifest: string[];
+        // 1. Ensure lib directory exists
+        this.pyodide.FS.mkdir('/lib');
+
+        // 2. Fetch and write bootstrap.py manually (it's the seed)
         try {
-            const response = await fetch('py-files.json', { cache: 'no-store' });
-            manifest = await response.json();
-        } catch (error) {
-            console.warn('[PyodideService] Failed to load manifest, using fallback');
-            manifest = this.getFallbackManifest();
+            const timestamp = new Date().getTime();
+            const response = await fetch(`lib/bootstrap.py?t=${timestamp}`);
+            if (!response.ok) throw new Error(`Failed to load bootstrap.py: ${response.status}`);
+            const content = await response.text();
+            this.pyodide.FS.writeFile("/lib/bootstrap.py", content);
+        } catch (err) {
+            console.error("[PyodideService] Failed to load bootstrap.py:", err);
+            throw err;
         }
 
-        // Load each file
-        for (const filepath of manifest) {
-            try {
-                const response = await fetch(filepath, { cache: 'no-store' });
-                const content = await response.text();
-                this.pyodide.FS.writeFile(`/${filepath}`, content);
-            } catch (error) {
-                console.error(`[PyodideService] Failed to load ${filepath}:`, error);
-            }
+        // 3. Run bootstrap to install everything else from manifest
+        try {
+            await this.pyodide.runPythonAsync(`
+                import lib.bootstrap
+                await lib.bootstrap.install_assets('py-files.json')
+            `);
+            console.log("[PyodideService] Python environment finished bootstrapping.");
+        } catch (err) {
+            console.error("[PyodideService] Bootstrap execution failed:", err);
+            throw err;
         }
     }
 
@@ -158,30 +160,5 @@ result_json
         return this.pyodide !== null;
     }
 
-    /**
-     * Fallback file list if manifest fails to load.
-     */
-    private getFallbackManifest(): string[] {
-        return [
-            'lib/__init__.py',
-            'lib/config_dynamic.py',
-            'lib/cleaners.py',
-            'lib/builders.py',
-            'lib/utils.py',
-            'lib/exceptions.py',
-            'lib/quality.py',
-            'lib/schemas/__init__.py',
-            'lib/schemas/output.py',
-            'lib/schemas/errors.py',
-            'py/pipeline/__init__.py',
-            'py/pipeline/base.py',
-            'py/pipeline/orchestrator.py',
-            'py/pipeline/steps/__init__.py',
-            'py/pipeline/steps/validate.py',
-            'py/pipeline/steps/clean.py',
-            'py/pipeline/steps/aggregate.py',
-            'py/pipeline/steps/charts.py',
-            'py/pipeline/steps/export.py',
-        ];
-    }
+
 }
