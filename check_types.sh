@@ -14,4 +14,5 @@
 # - docs/lib: Shared library code (cleaners, builders, config)
 # - docs/py/pipeline: Modular pipeline steps (Clean, Aggregate, etc.)
 
+python3 build.py
 python3 -m mypy docs/lib docs/py/pipeline

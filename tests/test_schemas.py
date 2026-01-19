@@ -168,9 +168,11 @@ class TestChartDataSchema:
         }
 
         # Pydantic won't reject this structurally (all are valid lists)
-        # but we can add custom validation if needed
+        # unless we add a specific validator in the model, which we haven't done yet.
+        # So for now, we expect this PASS, but structurally it is a potential issue.
+        # This test documents that behavior.
         validated = ChartData(**chart_data)
-        assert len(validated.labels) != len(validated.values)  # Catches the mismatch
+        assert len(validated.labels) != len(validated.values)
 
 
 class TestProcessingSummarySchema:
