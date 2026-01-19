@@ -164,6 +164,10 @@ class ChartsCollection(BaseModel):
         default_factory=list,
         description="Interactive filter options for weekly chart"
     )
+    date_range: Optional[Dict[str, Optional[str]]] = Field(
+        default=None,
+        description="Min and max dates from raw data for slider"
+    )
 
 
 class TablesCollection(BaseModel):

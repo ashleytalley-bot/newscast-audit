@@ -362,102 +362,118 @@ export class NewscastAuditApp {
      * @param {ProcessingResult} result 
      */
     initializeDateFilters(result) {
+        // Use raw date range from backend if available (better granularity than weekly chart)
         // @ts-ignore
-        if (result.charts && result.charts.weekly && result.charts.weekly.full_dates) {
-            // @ts-ignore
-            const dates = result.charts.weekly.full_dates.sort();
-            if (dates.length > 0) {
-                let minTimestamp = new Date(dates[0]).getTime();
-                let maxTimestamp = new Date(dates[dates.length - 1]).getTime();
+        let minTimestamp, maxTimestamp;
+        let pChartDates = [];
 
-                console.log("Slider Dates Debug:", {
-                    rawDates: dates,
-                    minT: minTimestamp,
-                    maxT: maxTimestamp,
-                    minStr: new Date(minTimestamp).toISOString(),
-                    maxStr: new Date(maxTimestamp).toISOString()
+        // @ts-ignore
+        if (result.charts && result.charts.date_range && result.charts.date_range.min) {
+            // @ts-ignore
+            minTimestamp = new Date(result.charts.date_range.min).getTime();
+            // @ts-ignore
+            maxTimestamp = new Date(result.charts.date_range.max).getTime();
+            console.log("Using raw daily date range:", result.charts.date_range);
+        }
+        // Fallback to weekly chart dates
+        // @ts-ignore
+        else if (result.charts && result.charts.weekly && result.charts.weekly.full_dates) {
+            // @ts-ignore
+            pChartDates = result.charts.weekly.full_dates.sort();
+            if (pChartDates.length > 0) {
+                minTimestamp = new Date(pChartDates[0]).getTime();
+                maxTimestamp = new Date(pChartDates[pChartDates.length - 1]).getTime();
+            }
+        }
+
+        if (minTimestamp && maxTimestamp) {
+            console.log("Slider Dates Debug:", {
+                minT: minTimestamp,
+                maxT: maxTimestamp,
+                minStr: new Date(minTimestamp).toISOString(),
+                maxStr: new Date(maxTimestamp).toISOString()
+            });
+
+            // Validate timestamps
+            if (isNaN(minTimestamp) || isNaN(maxTimestamp)) {
+                console.warn("Invalid dates found for slider:", dates);
+                return;
+            }
+
+            // Handle single-date case (min == max) by adding a buffer
+            if (minTimestamp === maxTimestamp) {
+                minTimestamp -= 259200000; // 3 days
+                maxTimestamp += 259200000; // 3 days
+            }
+
+            const slider = document.getElementById('date-slider');
+
+            // Destroy existing slider if present
+            // @ts-ignore
+            if (slider.noUiSlider) {
+                // @ts-ignore
+                slider.noUiSlider.destroy();
+            }
+
+            // Force a minimum range of 3 days to prevent "stuck" slider
+            const DAY_MS = 86400000;
+            let startTimestamp = Number(minTimestamp);
+            let endTimestamp = Number(maxTimestamp);
+
+            if ((endTimestamp - startTimestamp) < (2 * DAY_MS)) {
+                // Less than 2 days range? Add buffer
+                console.log("Expanding small date range for slider comfort");
+                startTimestamp -= (2 * DAY_MS);
+                endTimestamp += (2 * DAY_MS);
+            }
+
+            try {
+                // @ts-ignore
+                noUiSlider.create(slider, {
+                    start: [startTimestamp, endTimestamp],
+                    connect: true,
+                    behaviour: 'drag-tap',
+                    range: {
+                        'min': startTimestamp,
+                        'max': endTimestamp
+                    },
+                    step: 86400000, // 1 day
+                    format: {
+                        to: function (value) {
+                            try {
+                                return new Date(value).toISOString().split('T')[0];
+                            } catch (e) {
+                                return new Date().toISOString().split('T')[0];
+                            }
+                        },
+                        from: function (value) {
+                            return new Date(value).getTime();
+                        }
+                    }
                 });
 
-                // Validate timestamps
-                if (isNaN(minTimestamp) || isNaN(maxTimestamp)) {
-                    console.warn("Invalid dates found for slider:", dates);
-                    return;
-                }
+                const dateValues = document.getElementById('slider-values');
+                const startInput = document.getElementById('filter-start-date');
+                const endInput = document.getElementById('filter-end-date');
 
-                // Handle single-date case (min == max) by adding a buffer
-                if (minTimestamp === maxTimestamp) {
-                    minTimestamp -= 259200000; // 3 days
-                    maxTimestamp += 259200000; // 3 days
-                }
-
-                const slider = document.getElementById('date-slider');
-
-                // Destroy existing slider if present
                 // @ts-ignore
-                if (slider.noUiSlider) {
-                    // @ts-ignore
-                    slider.noUiSlider.destroy();
-                }
+                slider.noUiSlider.on('update', function (values, handle) {
+                    dateValues.innerHTML = `${values[0]}  —  ${values[1]}`;
 
-                // Force a minimum range of 3 days to prevent "stuck" slider
-                const DAY_MS = 86400000;
-                let startTimestamp = Number(minTimestamp);
-                let endTimestamp = Number(maxTimestamp);
-
-                if ((endTimestamp - startTimestamp) < (2 * DAY_MS)) {
-                    // Less than 2 days range? Add buffer
-                    console.log("Expanding small date range for slider comfort");
-                    startTimestamp -= (2 * DAY_MS);
-                    endTimestamp += (2 * DAY_MS);
-                }
-
-                try {
-                    // @ts-ignore
-                    noUiSlider.create(slider, {
-                        start: [startTimestamp, endTimestamp],
-                        connect: true,
-                        behaviour: 'drag-tap',
-                        range: {
-                            'min': startTimestamp,
-                            'max': endTimestamp
-                        },
-                        step: 86400000, // 1 day
-                        format: {
-                            to: function (value) {
-                                try {
-                                    return new Date(value).toISOString().split('T')[0];
-                                } catch (e) {
-                                    return new Date().toISOString().split('T')[0];
-                                }
-                            },
-                            from: function (value) {
-                                return new Date(value).getTime();
-                            }
-                        }
-                    });
-
-                    const dateValues = document.getElementById('slider-values');
-                    const startInput = document.getElementById('filter-start-date');
-                    const endInput = document.getElementById('filter-end-date');
-
-                    // @ts-ignore
-                    slider.noUiSlider.on('update', function (values, handle) {
-                        dateValues.innerHTML = `${values[0]}  —  ${values[1]}`;
-
-                        if (handle === 0) {
-                            // @ts-ignore
-                            startInput.value = values[0];
-                        } else {
-                            // @ts-ignore
-                            endInput.value = values[1];
-                        }
-                    });
-                } catch (err) {
-                    console.error("Slider creation failed:", err);
-                }
+                    if (handle === 0) {
+                        // @ts-ignore
+                        startInput.value = values[0];
+                    } else {
+                        // @ts-ignore
+                        endInput.value = values[1];
+                    }
+                });
+            } catch (err) {
+                console.error("Slider creation failed:", err);
             }
         }
     }
+}
 
     /**
      * Process the data using the Python pipeline
@@ -466,187 +482,187 @@ export class NewscastAuditApp {
      * @returns {Promise<ProcessingOutput>} The processing result or error response
      */
     async processDataWithPython(jsonData, options = null) {
-        this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
+    this.pyodide.globals.set('json_data', JSON.stringify(jsonData));
 
-        // Pass options if they exist
-        let optionsCode = 'None';
-        if (options) {
-            this.pyodide.globals.set('opts_json', JSON.stringify(options));
-            optionsCode = 'json.loads(opts_json)';
-            // Ensure json import is available
-            await this.pyodide.runPythonAsync('import json');
-        }
+    // Pass options if they exist
+    let optionsCode = 'None';
+    if (options) {
+        this.pyodide.globals.set('opts_json', JSON.stringify(options));
+        optionsCode = 'json.loads(opts_json)';
+        // Ensure json import is available
+        await this.pyodide.runPythonAsync('import json');
+    }
 
-        const resultJson = await this.pyodide.runPythonAsync(`
+    const resultJson = await this.pyodide.runPythonAsync(`
             result = pipeline.execute(json_data, options=${optionsCode})
             result
         `);
 
-        return JSON.parse(resultJson);
+    return JSON.parse(resultJson);
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// UI STATE MANAGEMENT
+// ═══════════════════════════════════════════════════════════════════════
+
+showLoading(message) {
+    this.dom.loadingText.textContent = message;
+    this.dom.loadingIndicator.classList.remove('hidden');
+}
+
+hideLoading() {
+    this.dom.loadingIndicator.classList.add('hidden');
+}
+
+hideError() {
+    this.dom.errorMessage.classList.add('hidden');
+    // @ts-ignore global errorUI
+    errorUI.clearAll();
+}
+
+showResults() {
+    this.dom.uploadSection.classList.add('hidden');
+    this.dom.resultsSection.classList.remove('hidden');
+}
+
+resetToUpload() {
+    this.dom.resultsSection.classList.add('hidden');
+    this.dom.uploadSection.classList.remove('hidden');
+    this.dom.fileInput.value = '';
+    this.hideError();
+    // @ts-ignore global errorUI
+    errorUI.clearAll();
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RESULT RENDERING
+// ═══════════════════════════════════════════════════════════════════════
+
+renderResults() {
+    this.renderSummary();
+    this.renderTables();
+    this.renderCharts();
+}
+
+renderSummary() {
+    const summary = this.processedData.summary;
+    document.getElementById('summary-rows').textContent = summary.record_count.toString();
+    document.getElementById('summary-metrics').textContent = summary.metric_count.toString();
+    document.getElementById('summary-missing').textContent = summary.missing_newscast.toString();
+}
+
+renderTables() {
+    const tables = this.processedData.tables;
+
+    // Overall metrics
+    this.tableRenderer.render('table-overall', tables.overall, ['Question', 'Yes %'], this.processedData.config);
+
+    // Data quality
+    this.tableRenderer.render('table-quality', tables.data_quality, ['Question', 'Complete %', 'Missing'], this.processedData.config);
+
+    // Recent week (if available)
+    if (tables.recent) {
+        document.getElementById('recent-week-card').classList.remove('hidden');
+        document.getElementById('recent-week-title').textContent =
+            `Week of ${tables.recent_week_start}`;
+        this.tableRenderer.render('table-recent', tables.recent, ['Question', 'Yes %'], this.processedData.config);
+    } else {
+        document.getElementById('recent-week-card').classList.add('hidden');
     }
 
-    // ═══════════════════════════════════════════════════════════════════════
-    // UI STATE MANAGEMENT
-    // ═══════════════════════════════════════════════════════════════════════
+    // Volume by newscast
+    if (tables.volume) {
+        this.tableRenderer.render('table-volume', tables.volume, ['Newscast', 'Responses'], this.processedData.config);
+    }
+}
 
-    showLoading(message) {
-        this.dom.loadingText.textContent = message;
-        this.dom.loadingIndicator.classList.remove('hidden');
+renderCharts() {
+    const charts = this.processedData.charts;
+    const config = this.processedData.config;
+
+    // Render Charts
+    this.chartRenderer.renderOverallChart('chart-overall', charts.overall, config);
+    this.chartRenderer.renderPerNewscastCharts('charts-per-newscast', charts.per_newscast, config);
+
+    // Render Weekly Chart (New)
+    if (charts.weekly) {
+        this.chartRenderer.renderWeeklyChart('chart-weekly', charts.weekly, config);
     }
 
-    hideLoading() {
-        this.dom.loadingIndicator.classList.add('hidden');
-    }
+    // Initialize Weekly Chart Filter
+    if (charts.filter_options && charts.filter_options.length > 0) {
+        const select = /** @type {HTMLSelectElement} */ (document.getElementById('weekly-chart-filter'));
+        if (select) {
+            // Clear existing options (except default?) - simpler to rebuild
+            select.innerHTML = '';
 
-    hideError() {
-        this.dom.errorMessage.classList.add('hidden');
-        // @ts-ignore global errorUI
-        errorUI.clearAll();
-    }
+            // Add options
+            charts.filter_options.forEach((opt, index) => {
+                const option = document.createElement('option');
+                // Store index as value to easily retrieve full object later
+                option.value = index.toString();
+                option.textContent = opt.label;
+                select.appendChild(option);
+            });
 
-    showResults() {
-        this.dom.uploadSection.classList.add('hidden');
-        this.dom.resultsSection.classList.remove('hidden');
-    }
+            // Add event listener (remove old one to avoid duplicates if re-rendering? 
+            // A clean way is to clone node or just set onchange property)
+            select.onchange = () => {
+                const selectedIndex = parseInt(select.value);
+                const selectedData = charts.filter_options[selectedIndex];
+                if (selectedData) {
+                    try {
+                        // Construct WeeklyChart object from filter option
+                        const weeklyData = {
+                            dates: selectedData.dates,
+                            values: selectedData.values,
+                            full_dates: selectedData.dates, // Fallback
+                            center_line: selectedData.center_line, // Pass CL
+                            ucl: selectedData.ucl,                 // Pass UCL
+                            lcl: selectedData.lcl                  // Pass LCL
+                        };
 
-    resetToUpload() {
-        this.dom.resultsSection.classList.add('hidden');
-        this.dom.uploadSection.classList.remove('hidden');
-        this.dom.fileInput.value = '';
-        this.hideError();
-        // @ts-ignore global errorUI
-        errorUI.clearAll();
-    }
-
-    // ═══════════════════════════════════════════════════════════════════════
-    // RESULT RENDERING
-    // ═══════════════════════════════════════════════════════════════════════
-
-    renderResults() {
-        this.renderSummary();
-        this.renderTables();
-        this.renderCharts();
-    }
-
-    renderSummary() {
-        const summary = this.processedData.summary;
-        document.getElementById('summary-rows').textContent = summary.record_count.toString();
-        document.getElementById('summary-metrics').textContent = summary.metric_count.toString();
-        document.getElementById('summary-missing').textContent = summary.missing_newscast.toString();
-    }
-
-    renderTables() {
-        const tables = this.processedData.tables;
-
-        // Overall metrics
-        this.tableRenderer.render('table-overall', tables.overall, ['Question', 'Yes %'], this.processedData.config);
-
-        // Data quality
-        this.tableRenderer.render('table-quality', tables.data_quality, ['Question', 'Complete %', 'Missing'], this.processedData.config);
-
-        // Recent week (if available)
-        if (tables.recent) {
-            document.getElementById('recent-week-card').classList.remove('hidden');
-            document.getElementById('recent-week-title').textContent =
-                `Week of ${tables.recent_week_start}`;
-            this.tableRenderer.render('table-recent', tables.recent, ['Question', 'Yes %'], this.processedData.config);
-        } else {
-            document.getElementById('recent-week-card').classList.add('hidden');
-        }
-
-        // Volume by newscast
-        if (tables.volume) {
-            this.tableRenderer.render('table-volume', tables.volume, ['Newscast', 'Responses'], this.processedData.config);
-        }
-    }
-
-    renderCharts() {
-        const charts = this.processedData.charts;
-        const config = this.processedData.config;
-
-        // Render Charts
-        this.chartRenderer.renderOverallChart('chart-overall', charts.overall, config);
-        this.chartRenderer.renderPerNewscastCharts('charts-per-newscast', charts.per_newscast, config);
-
-        // Render Weekly Chart (New)
-        if (charts.weekly) {
-            this.chartRenderer.renderWeeklyChart('chart-weekly', charts.weekly, config);
-        }
-
-        // Initialize Weekly Chart Filter
-        if (charts.filter_options && charts.filter_options.length > 0) {
-            const select = /** @type {HTMLSelectElement} */ (document.getElementById('weekly-chart-filter'));
-            if (select) {
-                // Clear existing options (except default?) - simpler to rebuild
-                select.innerHTML = '';
-
-                // Add options
-                charts.filter_options.forEach((opt, index) => {
-                    const option = document.createElement('option');
-                    // Store index as value to easily retrieve full object later
-                    option.value = index.toString();
-                    option.textContent = opt.label;
-                    select.appendChild(option);
-                });
-
-                // Add event listener (remove old one to avoid duplicates if re-rendering? 
-                // A clean way is to clone node or just set onchange property)
-                select.onchange = () => {
-                    const selectedIndex = parseInt(select.value);
-                    const selectedData = charts.filter_options[selectedIndex];
-                    if (selectedData) {
-                        try {
-                            // Construct WeeklyChart object from filter option
-                            const weeklyData = {
-                                dates: selectedData.dates,
-                                values: selectedData.values,
-                                full_dates: selectedData.dates, // Fallback
-                                center_line: selectedData.center_line, // Pass CL
-                                ucl: selectedData.ucl,                 // Pass UCL
-                                lcl: selectedData.lcl                  // Pass LCL
-                            };
-
-                            this.chartRenderer.renderWeeklyChart('chart-weekly', weeklyData, config);
-                        } catch (e) {
-                            console.error("Error updating chart:", e);
-                        }
+                        this.chartRenderer.renderWeeklyChart('chart-weekly', weeklyData, config);
+                    } catch (e) {
+                        console.error("Error updating chart:", e);
                     }
-                };
-            }
-        }
-
-        // Render Heatmap (New)
-        // Only if per_newscast data exists
-        if (charts.per_newscast && charts.per_newscast.length > 0) {
-            this.chartRenderer.renderHeatmap('chart-heatmap', charts.per_newscast, config);
-        }
-
-        // Render Tables
-        // We use the generic render method for tables
-        this.tableRenderer.render('table-overall', this.processedData.tables.overall, ['Question', 'Yes %'], config);
-        this.tableRenderer.render('table-quality', this.processedData.tables.data_quality, ['Question', 'Complete %', 'Missing'], config);
-        this.tableRenderer.render('table-volume', this.processedData.tables.volume, ['Newscast', 'Responses'], config);
-
-        // Render Comments (New)
-        // @ts-ignore
-        if (this.processedData.comments) {
-            // @ts-ignore
-            this.commentRenderer.renderComments('comments-feed', this.processedData.comments);
+                }
+            };
         }
     }
+
+    // Render Heatmap (New)
+    // Only if per_newscast data exists
+    if (charts.per_newscast && charts.per_newscast.length > 0) {
+        this.chartRenderer.renderHeatmap('chart-heatmap', charts.per_newscast, config);
+    }
+
+    // Render Tables
+    // We use the generic render method for tables
+    this.tableRenderer.render('table-overall', this.processedData.tables.overall, ['Question', 'Yes %'], config);
+    this.tableRenderer.render('table-quality', this.processedData.tables.data_quality, ['Question', 'Complete %', 'Missing'], config);
+    this.tableRenderer.render('table-volume', this.processedData.tables.volume, ['Newscast', 'Responses'], config);
+
+    // Render Comments (New)
+    // @ts-ignore
+    if (this.processedData.comments) {
+        // @ts-ignore
+        this.commentRenderer.renderComments('comments-feed', this.processedData.comments);
+    }
+}
 
     // ═══════════════════════════════════════════════════════════════════════
     // EXPORT FUNCTIONALITY
     // ═══════════════════════════════════════════════════════════════════════
 
     async exportExcel() {
-        if (!this.processedData) return;
-        // @ts-ignore
-        await this.exporter.exportToExcel(this.processedData);
-    }
+    if (!this.processedData) return;
+    // @ts-ignore
+    await this.exporter.exportToExcel(this.processedData);
+}
 
     async exportPowerPoint() {
-        if (!this.processedData) return;
-        await this.exporter.exportToPowerPoint(this.processedData, this.chartRenderer);
-    }
+    if (!this.processedData) return;
+    await this.exporter.exportToPowerPoint(this.processedData, this.chartRenderer);
+}
 }
