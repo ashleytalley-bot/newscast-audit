@@ -189,8 +189,7 @@ class NewscastAuditApp {
         if (!this.pyodide) {
             this.pyodide = await loadPyodide();
 
-            this.showLoading(LOADING_MESSAGES.loadingLibs);
-            await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml']);
+            await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml', 'pydantic']);
 
             // Load all Python files
             await this.loadPythonFiles();
