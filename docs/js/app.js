@@ -212,9 +212,6 @@ export class NewscastAuditApp {
                 errorUI.showWarnings(result.quality);
             }
 
-            // Initialize Date Filters from result data
-            this.initializeDateFilters(result);
-
             // Render results
             this.showLoading(LOADING_MESSAGES.rendering);
             // @ts-ignore result is Success here
@@ -223,6 +220,10 @@ export class NewscastAuditApp {
 
             this.hideLoading();
             this.showResults();
+
+            // Initialize Date Filters AFTER showing results so slider can calculate width
+            // Fixes "slider stuck" issue
+            this.initializeDateFilters(result);
 
         } catch (error) {
             this.hideLoading();

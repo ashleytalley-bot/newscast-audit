@@ -114,23 +114,85 @@ export class ChartRenderer {
      * @param {ConfigPassthrough} config 
      */
     renderWeeklyChart(containerId, weeklyData, config) {
-        const container = document.getElementById(containerId);
         if (!container || !weeklyData) return;
 
-        const trace = {
-            x: weeklyData.dates,
-            y: weeklyData.values,
-            type: 'scatter',
-            mode: 'lines+markers',
-            line: {
-                color: config.palette.primary,
-                width: 3,
-                shape: 'spline'
-            },
-            marker: { size: 8 },
-            text: weeklyData.full_dates,
-            hovertemplate: 'Week of %{text}: %{y}%<extra></extra>'
+        const commonLineProps = {
+            width: 3,
+            shape: 'spline' // Curve for main data
         };
+
+        const traces = [
+            {
+                x: weeklyData.dates,
+                y: weeklyData.values,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Performance',
+                line: {
+                    color: config.palette.primary,
+                    ...commonLineProps
+                },
+                marker: { size: 8 },
+                text: weeklyData.full_dates,
+                hovertemplate: 'Week of %{text}: %{y}%<extra></extra>',
+                connectgaps: true
+            }
+        ];
+
+        // Add P-Chart Control Limits if available
+        if (weeklyData.center_line !== null && weeklyData.center_line !== undefined) {
+            traces.push({
+                x: weeklyData.dates,
+                // Create constant line for center line
+                y: weeklyData.dates.map(() => weeklyData.center_line),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Average (CL)',
+                line: {
+                    color: '#2e7d32', // Green
+                    width: 2,
+                    dash: 'solid'
+                },
+                hoverinfo: 'name+y',
+                connectgaps: true
+            });
+        }
+
+        if (weeklyData.ucl && weeklyData.ucl.length > 0) {
+            traces.push({
+                x: weeklyData.dates,
+                y: weeklyData.ucl,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'UCL',
+                line: {
+                    color: '#c62828', // Red
+                    width: 2,
+                    dash: 'dash',
+                    shape: 'hv' // Stepped line for limits
+                },
+                hoverinfo: 'name+y',
+                connectgaps: true
+            });
+        }
+
+        if (weeklyData.lcl && weeklyData.lcl.length > 0) {
+            traces.push({
+                x: weeklyData.dates,
+                y: weeklyData.lcl,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'LCL',
+                line: {
+                    color: '#c62828', // Red
+                    width: 2,
+                    dash: 'dash',
+                    shape: 'hv'
+                },
+                hoverinfo: 'name+y',
+                connectgaps: true
+            });
+        }
 
         const layout = {
             title: 'Weekly Performance Trend',
@@ -147,7 +209,7 @@ export class ChartRenderer {
         };
 
         // @ts-ignore
-        Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+        Plotly.newPlot(containerId, traces, layout, { responsive: CHART_DEFAULTS.responsive });
     }
 
     /**
@@ -164,14 +226,14 @@ export class ChartRenderer {
         const maxN = Math.max(...perNewscastData.map(d => d.n));
 
         // Extract all newscast names for Y-axis ordering
-        // (Reverse them so the first item in array appears at top of chart)
         const allNewscasts = perNewscastData.map(d => d.newscast).reverse();
 
-        // Create one trace per newscast to allow individual opacity control
+        // Create one trace per newscast
         const traces = perNewscastData.map((data, i) => {
-            // Normalize N (min 0.3 opacity to ensure visibility)
+            // Updated: Make default much more opaque (0.75 min) so it looks "solid"
+            // Scaling is subtle (0.75 to 1.0)
             const normalizedN = maxN > 0 ? (data.n / maxN) : 1;
-            const opacity = 0.3 + (0.7 * normalizedN);
+            const opacity = 0.75 + (0.25 * normalizedN);
 
             return {
                 z: [data.values],
@@ -179,14 +241,16 @@ export class ChartRenderer {
                 y: [data.newscast],
                 type: 'heatmap',
                 colorscale: [
-                    [0, '#d32f2f'],   // Red for low
-                    [0.5, '#fbc02d'], // Yellow for mid
-                    [1, '#388e3c']    // Green for high
+                    [0, '#d32f2f'],   // Red
+                    [0.5, '#fbc02d'], // Yellow
+                    [1, '#388e3c']    // Green
                 ],
                 zmin: 0,
                 zmax: 100,
                 opacity: opacity,
-                showscale: i === 0, // Only show colorbar for the first trace
+                xgap: 1, // Slight gap for grid effect
+                ygap: 1,
+                showscale: i === 0,
                 hoverongaps: false,
                 hovertemplate:
                     `Newscast: %{y}<br>` +
