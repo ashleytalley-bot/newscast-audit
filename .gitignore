@@ -20,3 +20,7 @@ __pycache__/
 *.pyc
 
 node_modules/
+
+# Test artifacts
+test-results/
+.last-run.json
