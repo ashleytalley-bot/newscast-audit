@@ -165,9 +165,7 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
     config = get_config()
     
     # Step 1: Rename columns
-    print("DEBUG: Raw Columns from Excel:", df.columns.tolist())
     df = standardize_columns(df)
-    print("DEBUG: Renamed Columns:", df.columns.tolist())
 
     # Step 2: Normalize newscast names
     if 'newscast' in df.columns:
@@ -194,18 +192,9 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
         # Find rows where we have no valid newscast date BUT we do have a valid start time
         mask_fill = df['newscast_date_parsed'].isna() & start_ts.notna() & (start_ts.dt.year >= 2020)
         
-        fill_count = mask_fill.sum()
-        if fill_count > 0:
-            print(f"DEBUG: Recovered {fill_count} rows using 'start_time'")
-            print("DEBUG: Recovered examples:", start_ts[mask_fill].head().tolist())
+        if mask_fill.any():
             # Use the date component of start_time
             df.loc[mask_fill, 'newscast_date_parsed'] = start_ts[mask_fill].dt.floor('D')
-        else:
-            print("DEBUG: No rows recovered using 'start_time' (either none needed or start_time invalid)")
-            if df['newscast_date_parsed'].isna().sum() > 0:
-                 print("DEBUG: Still have missing dates. Start time examples:", df['start_time'].head().tolist())
-    else:
-        print("DEBUG: 'start_time' column NOT found for fallback")
 
 
     # Step 4: Convert yes/no to numeric for present metric columns
