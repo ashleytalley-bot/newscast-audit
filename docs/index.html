@@ -105,7 +105,6 @@
                     <!-- Hidden inputs to store values for logic -->
                     <input type="hidden" id="filter-start-date">
                     <input type="hidden" id="filter-end-date">
-                    <button id="btn-apply-filter" class="btn btn-sm btn-outline-primary ms-3">Apply Filter</button>
                     <!-- Clear button removed as slider handles range reset visually better or can just drag handles -->
                 </div>
 
@@ -235,7 +234,7 @@
         };
     </script>
     <script type="module">
-        import { NewscastAuditApp } from './js/app.js?v=7';
+        import { NewscastAuditApp } from './js/app.js?v=8';
         document.addEventListener('DOMContentLoaded', () => {
             try {
                 const app = new NewscastAuditApp();

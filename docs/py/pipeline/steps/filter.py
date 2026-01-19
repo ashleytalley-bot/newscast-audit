@@ -64,9 +64,8 @@ class FilteringStep(PipelineStep):
         if end_date:
             try:
                 ts_end = pd.to_datetime(end_date)
-                # Include the entire end date (up to 23:59:59 if needed, but usually dates are normalized to midnight)
-                # If these are dates without times, inclusive <= works.
-                df = df[df['newscast_date_parsed'] <= ts_end]
+                # Include the entire end date by checking if dates are strictly before the next day
+                df = df[df['newscast_date_parsed'] < (ts_end + pd.Timedelta(days=1))]
             except (ValueError, TypeError):
                 context.quality_tracker.add_warning("Invalid end date filter ignored")
 

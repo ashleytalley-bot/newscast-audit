@@ -84,7 +84,8 @@ export class NewscastAuditApp {
         document.getElementById('btn-new-file').addEventListener('click', () => this.resetToUpload());
 
         // Filter buttons
-        document.getElementById('btn-apply-filter').addEventListener('click', () => this.applyDateFilter());
+        // Event listener removed as slider updates automatically
+        // document.getElementById('btn-apply-filter').addEventListener('click', () => this.applyDateFilter());
         document.getElementById('btn-copy-comments').addEventListener('click', () => this.copyCommentsToClipboard());
     }
 
@@ -189,6 +190,12 @@ export class NewscastAuditApp {
 
             this.hideError();
             this.showLoading(LOADING_MESSAGES.readingFile);
+
+            // Clear existing period filters on new file upload to show full range by default
+            const startInput = document.getElementById('filter-start-date');
+            const endInput = document.getElementById('filter-end-date');
+            if (startInput) (/** @type {HTMLInputElement} */ (startInput)).value = '';
+            if (endInput) (/** @type {HTMLInputElement} */ (endInput)).value = '';
 
             // Parse Excel file
             const jsonData = await this.parseExcelFile(file);
@@ -402,13 +409,17 @@ export class NewscastAuditApp {
         }
 
         if (minTimestamp && maxTimestamp) {
-            // Clean up times to midnight for clean day math
-            const minDate = new Date(minTimestamp).setHours(0, 0, 0, 0);
-            const maxDate = new Date(maxTimestamp).setHours(0, 0, 0, 0);
+            // Use UTC math to avoid timezone shifts during initialization
+            const minDateObj = new Date(minTimestamp);
+            const minDate = Date.UTC(minDateObj.getUTCFullYear(), minDateObj.getUTCMonth(), minDateObj.getUTCDate());
+
+            const maxDateObj = new Date(maxTimestamp);
+            const maxDate = Date.UTC(maxDateObj.getUTCFullYear(), maxDateObj.getUTCMonth(), maxDateObj.getUTCDate());
+
             const DAY_MS = 86400000;
             const totalDays = Math.round((maxDate - minDate) / DAY_MS);
 
-            console.log("Slider Setup (Refined):", {
+            console.log("Slider Setup (UTC):", {
                 minDateStr: new Date(minDate).toISOString().split('T')[0],
                 maxDateStr: new Date(maxDate).toISOString().split('T')[0],
                 totalDays: totalDays
@@ -424,8 +435,11 @@ export class NewscastAuditApp {
 
             // Persistence
             if (startInput && startInput.value && endInput && endInput.value) {
-                const curStart = new Date(startInput.value).setHours(0, 0, 0, 0);
-                const curEnd = new Date(endInput.value).setHours(0, 0, 0, 0);
+                const sDate = new Date(startInput.value);
+                const curStart = Date.UTC(sDate.getUTCFullYear(), sDate.getUTCMonth(), sDate.getUTCDate());
+
+                const eDate = new Date(endInput.value);
+                const curEnd = Date.UTC(eDate.getUTCFullYear(), eDate.getUTCMonth(), eDate.getUTCDate());
 
                 if (!isNaN(curStart) && !isNaN(curEnd)) {
                     dayStart = Math.max(0, Math.round((curStart - minDate) / DAY_MS));
