@@ -583,23 +583,13 @@ export class NewscastAuditApp {
                             const weeklyData = {
                                 dates: selectedData.dates,
                                 values: selectedData.values,
-                                full_dates: selectedData.dates, // Fallback as filter options behave like ISO strings
-                                center_line: selectedData.center_line,
-                                ucl: selectedData.ucl,
-                                lcl: selectedData.lcl
+                                full_dates: selectedData.dates, // Fallback
+                                center_line: selectedData.center_line, // Pass CL
+                                ucl: selectedData.ucl,                 // Pass UCL
+                                lcl: selectedData.lcl                  // Pass LCL
                             };
 
-                            // Re-map fields if necessary. 
-                            // FilterOption has { label, dates, values }
-                            // WeeklyChart has { dates, values, full_dates }
-                            // If FilterOption dates are ISO, we need to generate short dates for X-axis?
-                            // Or just use them.
-
-                            this.chartRenderer.renderWeeklyChart('chart-weekly', {
-                                dates: selectedData.dates, // These are likely formatted 'MM/DD' from builder?
-                                values: selectedData.values,
-                                full_dates: selectedData.dates // Fallback
-                            }, config);
+                            this.chartRenderer.renderWeeklyChart('chart-weekly', weeklyData, config);
                         } catch (e) {
                             console.error("Error updating chart:", e);
                         }

@@ -119,7 +119,7 @@ export class ChartRenderer {
 
         const commonLineProps = {
             width: 3,
-            shape: 'spline' // Curve for main data
+            shape: 'linear' // Straight lines as requested
         };
 
         const traces = [
@@ -133,7 +133,7 @@ export class ChartRenderer {
                     color: config.palette.primary,
                     ...commonLineProps
                 },
-                marker: { size: 8 },
+                marker: { size: 12 }, // Bigger points
                 text: weeklyData.full_dates,
                 hovertemplate: 'Week of %{text}: %{y}%<extra></extra>',
                 connectgaps: true
@@ -167,12 +167,13 @@ export class ChartRenderer {
                 mode: 'lines',
                 name: 'UCL',
                 line: {
-                    color: '#c62828', // Red
+                    color: '#9e9e9e', // Gray
                     width: 2,
-                    dash: 'dash',
+                    dash: 'dot',  // Dotted
                     shape: 'hv' // Stepped line for limits
                 },
                 hoverinfo: 'name+y',
+                opacity: 0.7,
                 connectgaps: true
             });
         }
@@ -185,12 +186,13 @@ export class ChartRenderer {
                 mode: 'lines',
                 name: 'LCL',
                 line: {
-                    color: '#c62828', // Red
+                    color: '#9e9e9e', // Gray
                     width: 2,
-                    dash: 'dash',
+                    dash: 'dot', // Dotted
                     shape: 'hv'
                 },
                 hoverinfo: 'name+y',
+                opacity: 0.7,
                 connectgaps: true
             });
         }
