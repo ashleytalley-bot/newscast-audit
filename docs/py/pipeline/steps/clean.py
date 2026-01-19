@@ -15,6 +15,7 @@ functions in processing.py.
 
 import sys
 from pathlib import Path
+import pandas as pd
 
 
 from lib.cleaners import clean_data
@@ -64,6 +65,19 @@ class CleaningStep(PipelineStep):
         quality_tracker = context.quality_tracker
         initial_row_count = context.get('initial_row_count', len(df_raw))
 
+        # Track ignored columns
+        config = get_config()
+        mapped_sources = set(config.COLUMN_MAPPING.keys())
+        # Add system columns that might be present but are handled separately
+        system_cols = {'Which newscast are you auditing?', 'Date of newscast:', 'Start time', 'ID', 'Name', 'Email'}
+        
+        ignored_cols = [col for col in df_raw.columns if col not in mapped_sources and not any(s in str(col) for s in system_cols)]
+        if ignored_cols:
+            quality_tracker.add_info(
+                f"Ignored {len(ignored_cols)} unexpected columns in spreadsheet",
+                {"examples": ignored_cols[:10]} # List first 10
+            )
+
         # Clean data using existing cleaning function
         try:
             df, metric_columns, dropped_empty = clean_data(df_raw.copy())
@@ -73,6 +87,27 @@ class CleaningStep(PipelineStep):
                 operation="data_cleaning",
                 original_error=e
             )
+
+        # Track unknown values ('UNKNOWN_VALUE' sentinel from cleaners.py)
+        for col in metric_columns:
+            if col in df.columns:
+                unknown_mask = df[col] == 'UNKNOWN_VALUE'
+                if unknown_mask.any():
+                    unknown_count = unknown_mask.sum()
+                    # Get actual raw values from raw data for examples
+                    # Mapping back is tricky because of dropped rows, but we can just use the processed DF
+                    # since convert_to_numeric was applied to the copy.
+                    # Wait, clean_data applies it. 
+                    # Let's just track that it happened.
+                    quality_tracker.add_warning(
+                        f"Found {unknown_count} unexpected entries in '{col}' (treated as N/A)",
+                        count=unknown_count
+                    )
+                    # Now convert sentinel to pd.NA to prevent downstream type errors
+                    df.loc[unknown_mask, col] = pd.NA
+                
+                # Ensure correct type after sentinel cleanup
+                df[col] = df[col].astype('Int64')
 
         # Check if too much data was dropped
         if dropped_empty > 0:
@@ -91,8 +126,9 @@ class CleaningStep(PipelineStep):
 
         # Track unknown newscast formats
         if 'newscast_normalized' in df.columns and 'newscast' in df.columns:
+            # Re-normalize check because clean() already did it
             unknown_mask = (df['newscast'].notna()) & (
-                ~df['newscast_normalized'].isin(get_config().NEWSCAST_ORDER)
+                ~df['newscast_normalized'].isin(config.NEWSCAST_ORDER)
             ) & (df['newscast_normalized'].notna())
 
             if unknown_mask.any():
@@ -102,6 +138,12 @@ class CleaningStep(PipelineStep):
                     f"Found {unknown_count} responses with unrecognized newscast formats",
                     count=unknown_count,
                     examples=unknown_examples
+                )
+                
+                # Also add an info message explaining that these created new categories
+                quality_tracker.add_info(
+                    "Unrecognized newscast names were found. These have been kept as separate categories in the report.",
+                    {"unrecognized_examples": unknown_examples}
                 )
 
         # Track invalid dates

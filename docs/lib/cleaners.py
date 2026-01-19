@@ -141,8 +141,8 @@ def convert_to_numeric(v):
     except (ValueError, TypeError):
         pass
 
-    # Unknown format - treat as N/A
-    return pd.NA
+    # Unknown format - return sentinel for tracking (will be converted to NA after tracking)
+    return 'UNKNOWN_VALUE'
 
 
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
@@ -209,7 +209,6 @@ def clean_data(df: pd.DataFrame) -> Tuple[pd.DataFrame, List[str], int]:
     present_metrics = [c for c in config.METRIC_COLUMNS if c in df.columns]
     for col in present_metrics:
         df[col] = df[col].apply(convert_to_numeric)
-        df[col] = df[col].astype('Int64')
 
     # Step 5: Drop empty rows (all metric columns are NA)
     dropped_empty = 0
