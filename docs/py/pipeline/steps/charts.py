@@ -153,14 +153,24 @@ class ChartGenerationStep(PipelineStep):
                     })
 
         # Update context with charts
+        # Calculate ranges for debug
+        min_date = history_df['newscast_date_parsed'].min() if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
+        max_date = history_df['newscast_date_parsed'].max() if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
+        
+        if min_date is not None:
+            print(f"DEBUG: Charts Global Range: {min_date} to {max_date}")
+            print(f"DEBUG: History DF size: {len(history_df)}")
+        else:
+            print("DEBUG: Charts Global Range: None (Empty history or missing col)")
+
         context.set('charts', {
             'overall': overall_chart,
             'per_newscast': per_newscast_charts,
             'weekly': weekly_chart_dict,
             'filter_options': filter_options,
             'date_range': {
-                'min': history_df['newscast_date_parsed'].min().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None,
-                'max': history_df['newscast_date_parsed'].max().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
+                'min': min_date.strftime('%Y-%m-%d') if min_date else None,
+                'max': max_date.strftime('%Y-%m-%d') if max_date else None
             }
         })
 
