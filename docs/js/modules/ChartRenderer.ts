@@ -1,4 +1,3 @@
-// @ts-check
 import { CHART_DEFAULTS } from './config.js';
 
 // Global declaration for Plotly

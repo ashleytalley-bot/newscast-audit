@@ -5,8 +5,6 @@ Validates input data for:
 - Required columns presence
 - Non-empty DataFrame
 - Basic data integrity
-
-This is extracted from the validate_and_clean_data() function in processing.py.
 """
 
 import sys

@@ -592,7 +592,6 @@ export class NewscastAuditApp {
 
     async exportExcel() {
         if (!this.processedData) return;
-        // @ts-ignore
         await this.exporter.exportToExcel(this.processedData);
     }
 

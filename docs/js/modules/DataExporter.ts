@@ -1,4 +1,3 @@
-// @ts-check
 import type { ProcessingResult } from '../types/output';
 import type { ChartRenderer } from './ChartRenderer';
 
