@@ -219,11 +219,33 @@
     </footer>
 
     <script src="js/error-ui.js"></script>
+    <script>
+        // Global error handler to catch startup issues
+        window.onerror = function (msg, url, line, col, error) {
+            const errorDiv = document.getElementById('error-message');
+            if (errorDiv) {
+                errorDiv.classList.remove('hidden');
+                errorDiv.innerHTML += `<div style="color:red; margin-bottom:10px;">
+                    <strong>Startup Error:</strong> ${msg}<br>
+                    <small>${url}:${line}:${col}</small>
+                </div>`;
+            }
+            console.error('Global Error:', error);
+            return false;
+        };
+    </script>
     <script type="module">
         import { NewscastAuditApp } from './js/app.js';
         document.addEventListener('DOMContentLoaded', () => {
-            const app = new NewscastAuditApp();
-            app.init();
+            try {
+                const app = new NewscastAuditApp();
+                app.init();
+            } catch (e) {
+                console.error("App Init Error:", e);
+                // @ts-ignore
+                if (window.errorUI) window.errorUI.showError(e);
+                else document.getElementById('error-message').textContent = e.toString();
+            }
         });
     </script>
 </body>

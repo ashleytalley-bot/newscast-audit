@@ -22,6 +22,7 @@ import { CommentRenderer } from './modules/CommentRenderer.js';
 
 export class NewscastAuditApp {
     constructor() {
+        console.log("NewscastAuditApp constructor called");
         this.pyodide = null;
         /** @type {ProcessingResult | null} */
         this.processedData = null;
@@ -36,6 +37,19 @@ export class NewscastAuditApp {
             loadingText: document.getElementById('loading-text'),
             errorMessage: document.getElementById('error-message')
         };
+
+        // Validate DOM elements
+        for (const [key, element] of Object.entries(this.dom)) {
+            if (!element) {
+                console.error(`CRITICAL: DOM element '${key}' not found!`);
+                // Try to show error if possible
+                const errDiv = document.getElementById('error-message');
+                if (errDiv) {
+                    errDiv.classList.remove('hidden');
+                    errDiv.textContent = `Error: DOM element '${key}' missing. Page structure incorrect.`;
+                }
+            }
+        }
 
         this.chartRenderer = new ChartRenderer();
         this.tableRenderer = new TableRenderer();
