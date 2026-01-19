@@ -86,6 +86,11 @@ export class NewscastAuditApp {
     init() {
         console.log('Newscast Audit App v2.2.3 - Deployed: 2026-01-18');
         this.setupEventListeners();
+
+        // Register Progress Callback from Worker
+        this.pyodideService.setOnProgress((msg: string) => {
+            this.updateLoadingText(msg);
+        });
     }
 
     /**
@@ -324,94 +329,111 @@ export class NewscastAuditApp {
      */
     async processFile(file: File) {
         try {
-            // Validate file type
-            if (!file.name.match(/\.xlsx?$/i)) {
+            this.prepareUIForProcessing();
+
+            // 1. Validate File
+            if (!this.isValidExcelFile(file)) {
                 errorUI.showError('Please upload an Excel file (.xlsx or .xls)');
-                return;
-            }
-
-            this.hideError();
-            this.showLoading(LOADING_MESSAGES.readingFile);
-
-            // Clear existing period filters on new file upload
-            const startInput = document.getElementById('filter-start-date') as HTMLInputElement;
-            const endInput = document.getElementById('filter-end-date') as HTMLInputElement;
-            if (startInput) startInput.value = '';
-            if (endInput) endInput.value = '';
-
-            // Parse Excel file
-            const jsonData = await this.parseExcelFile(file);
-            this.jsonData = jsonData; // Store for filtering re-runs
-
-
-            // Validate data
-            if (!jsonData || jsonData.length === 0) {
-                errorUI.showError('Excel file appears to be empty');
-                return;
-            }
-
-            // Initialize Python environment
-            this.showLoading(LOADING_MESSAGES.initPython);
-            await this.pyodideService.initialize();
-
-            // Process data
-            this.showLoading(LOADING_MESSAGES.processing);
-            const result = await this.pyodideService.processData(jsonData); // Initial run (no options)
-
-            if (!result.success) {
-                errorUI.showError(result);
                 this.hideLoading();
                 return;
             }
 
-            // Show data quality warnings and info
-            const output = result as ProcessingOutput; // We know it's output if success is false, wait no if success is true
-            // Actually result is ProcessingOutput | ErrorResponse.
-            // If success is true it is ProcessingResult (which extends ProcessingOutput)
-            const successResult = result as ProcessingResult;
+            // 2. Parse File
+            this.showLoading(LOADING_MESSAGES.readingFile);
+            const jsonData = await this.parseExcelFile(file);
 
-            if (successResult.quality && (
-                (successResult.quality.warnings && successResult.quality.warnings.length > 0) ||
-                (successResult.quality.info && successResult.quality.info.length > 0)
-            )) {
-                errorUI.showWarnings(successResult.quality);
+            if (!this.isValidData(jsonData)) {
+                errorUI.showError('Excel file appears to be empty');
+                this.hideLoading();
+                return;
             }
+            this.jsonData = jsonData;
 
-            // Render results
-            this.showLoading(LOADING_MESSAGES.rendering);
-            this.processedData = successResult;
-            this.renderResults();
+            // 3. Initialize Python
+            this.showLoading(LOADING_MESSAGES.initPython);
+            await this.pyodideService.initialize();
 
-            this.hideLoading();
-            this.showResults();
+            // 4. Process Data
+            this.showLoading(LOADING_MESSAGES.processing);
+            const result = await this.pyodideService.processData(jsonData);
 
-            // Initialize Date Filters AFTER showing results
-            this.initializeDateFilters(successResult);
+            // 5. Handle Results
+            await this.handleProcessingResult(result);
 
         } catch (error) {
-            this.hideLoading();
-            console.error('Processing error:', error);
+            this.handleProcessingError(error);
+        }
+    }
 
-            let msg = "Unknown error occurred";
-            if (typeof error === 'string') {
-                msg = error;
-            } else if (error instanceof Error) {
-                msg = error.message;
-            } else if (typeof error === 'object' && error !== null) {
-                const errObj = error as any;
-                if (errObj.message) msg = errObj.message;
-                else if (errObj.error) msg = errObj.error;
-                else {
-                    try {
-                        msg = JSON.stringify(error);
-                    } catch (e) {
-                        msg = "Error object could not be stringified";
-                    }
+    private prepareUIForProcessing() {
+        this.hideError();
+        // Clear existing period filters on new file upload
+        const startInput = document.getElementById('filter-start-date') as HTMLInputElement;
+        const endInput = document.getElementById('filter-end-date') as HTMLInputElement;
+        if (startInput) startInput.value = '';
+        if (endInput) endInput.value = '';
+    }
+
+    private isValidExcelFile(file: File): boolean {
+        return !!file.name.match(/\.xlsx?$/i);
+    }
+
+    private isValidData(data: any[]): boolean {
+        return data && data.length > 0;
+    }
+
+    private async handleProcessingResult(result: ProcessingResult | ErrorResponse | ProcessingOutput) {
+        if (!result.success) {
+            errorUI.showError(result);
+            this.hideLoading();
+            return;
+        }
+
+        const successResult = result as ProcessingResult;
+
+        // Show warnings if any
+        if (successResult.quality && (
+            (successResult.quality.warnings && successResult.quality.warnings.length > 0) ||
+            (successResult.quality.info && successResult.quality.info.length > 0)
+        )) {
+            errorUI.showWarnings(successResult.quality);
+        }
+
+        // Render UI
+        this.showLoading(LOADING_MESSAGES.rendering);
+        this.processedData = successResult;
+        this.renderResults();
+
+        this.hideLoading();
+        this.showResults();
+
+        // Initialize Slider
+        this.initializeDateFilters(successResult);
+    }
+
+    private handleProcessingError(error: unknown) {
+        this.hideLoading();
+        console.error('Processing error:', error);
+
+        let msg = "Unknown error occurred";
+        if (typeof error === 'string') {
+            msg = error;
+        } else if (error instanceof Error) {
+            msg = error.message;
+        } else if (typeof error === 'object' && error !== null) {
+            const errObj = error as any;
+            if (errObj.message) msg = errObj.message;
+            else if (errObj.error) msg = errObj.error;
+            else {
+                try {
+                    msg = JSON.stringify(error);
+                } catch (e) {
+                    msg = "Error object could not be stringified";
                 }
             }
-
-            errorUI.showError(`Error processing file: ${msg}`);
         }
+
+        errorUI.showError(`Error processing file: ${msg}`);
     }
 
     /**

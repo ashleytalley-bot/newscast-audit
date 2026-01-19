@@ -39,17 +39,21 @@ async function initialize() {
     if (pyodide) return;
 
     console.log('[PyodideWorker] Loading Pyodide...');
+    self.postMessage({ type: 'progress', message: 'Loading Python runtime...' });
     pyodide = await loadPyodide({
         indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.26.1/full/',
     });
 
     console.log('[PyodideWorker] Loading Python packages...');
+    self.postMessage({ type: 'progress', message: 'Loading data libraries...' });
     await pyodide.loadPackage(['pandas', 'numpy', 'pyyaml', 'pydantic']);
 
     console.log('[PyodideWorker] Loading application Python files...');
+    self.postMessage({ type: 'progress', message: 'Bootstrapping environment...' });
     await loadPythonFiles();
 
     console.log('[PyodideWorker] Initializing configuration...');
+    self.postMessage({ type: 'progress', message: 'Loading configuration...' });
     await initializeConfig();
 }
 
@@ -186,7 +190,7 @@ async function processData(inputData: any, options: any = null) {
         # This implies Date Filtering might be broken or I misread the file?
         # Or maybe options are merged into inputData?
         
-        result_json = pipeline.execute(input_json) 
+        result_json = pipeline.execute(input_json, options=options) 
         result_json
     `);
 

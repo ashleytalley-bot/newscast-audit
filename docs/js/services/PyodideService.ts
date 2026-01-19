@@ -12,6 +12,14 @@ export class PyodideService {
     private initPromise: Promise<void> | null = null;
     private messageIdCounter = 0;
     private pendingMessages = new Map<number, { resolve: (val: any) => void, reject: (err: any) => void }>();
+    private onProgressCallback: ((msg: string) => void) | null = null;
+
+    /**
+     * Register a callback for progress updates.
+     */
+    setOnProgress(callback: (msg: string) => void) {
+        this.onProgressCallback = callback;
+    }
 
     /**
      * Initialize Pyodide Web Worker.
@@ -37,8 +45,17 @@ export class PyodideService {
             this.worker = new Worker('js/workers/PyodideWorker.js');
 
             this.worker.onmessage = (e) => {
-                const { type, id, payload, error } = e.data;
+                const { type, id, payload, error, message } = e.data;
                 const pending = this.pendingMessages.get(id);
+
+                if (type === 'progress') {
+                    // Emit progress to global callback if registered.
+                    // Ideally we'd have a more robust event system, but this works for now.
+                    if (this.onProgressCallback) {
+                        this.onProgressCallback(message);
+                    }
+                    return;
+                }
 
                 if (pending) {
                     if (type === 'error') {

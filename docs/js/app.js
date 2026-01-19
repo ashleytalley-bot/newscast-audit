@@ -57,6 +57,9 @@ class NewscastAuditApp {
   init() {
     console.log("Newscast Audit App v2.2.3 - Deployed: 2026-01-18");
     this.setupEventListeners();
+    this.pyodideService.setOnProgress((msg) => {
+      this.updateLoadingText(msg);
+    });
   }
   /**
    * Set up all event listeners
@@ -248,68 +251,84 @@ class NewscastAuditApp {
    */
   async processFile(file) {
     try {
-      if (!file.name.match(/\.xlsx?$/i)) {
+      this.prepareUIForProcessing();
+      if (!this.isValidExcelFile(file)) {
         errorUI.showError("Please upload an Excel file (.xlsx or .xls)");
+        this.hideLoading();
         return;
       }
-      this.hideError();
       this.showLoading(LOADING_MESSAGES.readingFile);
-      const startInput = document.getElementById("filter-start-date");
-      const endInput = document.getElementById("filter-end-date");
-      if (startInput)
-        startInput.value = "";
-      if (endInput)
-        endInput.value = "";
       const jsonData = await this.parseExcelFile(file);
-      this.jsonData = jsonData;
-      if (!jsonData || jsonData.length === 0) {
+      if (!this.isValidData(jsonData)) {
         errorUI.showError("Excel file appears to be empty");
+        this.hideLoading();
         return;
       }
+      this.jsonData = jsonData;
       this.showLoading(LOADING_MESSAGES.initPython);
       await this.pyodideService.initialize();
       this.showLoading(LOADING_MESSAGES.processing);
       const result = await this.pyodideService.processData(jsonData);
-      if (!result.success) {
-        errorUI.showError(result);
-        this.hideLoading();
-        return;
-      }
-      const output = result;
-      const successResult = result;
-      if (successResult.quality && (successResult.quality.warnings && successResult.quality.warnings.length > 0 || successResult.quality.info && successResult.quality.info.length > 0)) {
-        errorUI.showWarnings(successResult.quality);
-      }
-      this.showLoading(LOADING_MESSAGES.rendering);
-      this.processedData = successResult;
-      this.renderResults();
-      this.hideLoading();
-      this.showResults();
-      this.initializeDateFilters(successResult);
+      await this.handleProcessingResult(result);
     } catch (error) {
+      this.handleProcessingError(error);
+    }
+  }
+  prepareUIForProcessing() {
+    this.hideError();
+    const startInput = document.getElementById("filter-start-date");
+    const endInput = document.getElementById("filter-end-date");
+    if (startInput)
+      startInput.value = "";
+    if (endInput)
+      endInput.value = "";
+  }
+  isValidExcelFile(file) {
+    return !!file.name.match(/\.xlsx?$/i);
+  }
+  isValidData(data) {
+    return data && data.length > 0;
+  }
+  async handleProcessingResult(result) {
+    if (!result.success) {
+      errorUI.showError(result);
       this.hideLoading();
-      console.error("Processing error:", error);
-      let msg = "Unknown error occurred";
-      if (typeof error === "string") {
-        msg = error;
-      } else if (error instanceof Error) {
-        msg = error.message;
-      } else if (typeof error === "object" && error !== null) {
-        const errObj = error;
-        if (errObj.message)
-          msg = errObj.message;
-        else if (errObj.error)
-          msg = errObj.error;
-        else {
-          try {
-            msg = JSON.stringify(error);
-          } catch (e) {
-            msg = "Error object could not be stringified";
-          }
+      return;
+    }
+    const successResult = result;
+    if (successResult.quality && (successResult.quality.warnings && successResult.quality.warnings.length > 0 || successResult.quality.info && successResult.quality.info.length > 0)) {
+      errorUI.showWarnings(successResult.quality);
+    }
+    this.showLoading(LOADING_MESSAGES.rendering);
+    this.processedData = successResult;
+    this.renderResults();
+    this.hideLoading();
+    this.showResults();
+    this.initializeDateFilters(successResult);
+  }
+  handleProcessingError(error) {
+    this.hideLoading();
+    console.error("Processing error:", error);
+    let msg = "Unknown error occurred";
+    if (typeof error === "string") {
+      msg = error;
+    } else if (error instanceof Error) {
+      msg = error.message;
+    } else if (typeof error === "object" && error !== null) {
+      const errObj = error;
+      if (errObj.message)
+        msg = errObj.message;
+      else if (errObj.error)
+        msg = errObj.error;
+      else {
+        try {
+          msg = JSON.stringify(error);
+        } catch (e) {
+          msg = "Error object could not be stringified";
         }
       }
-      errorUI.showError(`Error processing file: ${msg}`);
     }
+    errorUI.showError(`Error processing file: ${msg}`);
   }
   /**
    * Parse Excel file to JSON using SheetJS

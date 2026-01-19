@@ -10,6 +10,13 @@ class PyodideService {
     __publicField(this, "initPromise", null);
     __publicField(this, "messageIdCounter", 0);
     __publicField(this, "pendingMessages", /* @__PURE__ */ new Map());
+    __publicField(this, "onProgressCallback", null);
+  }
+  /**
+   * Register a callback for progress updates.
+   */
+  setOnProgress(callback) {
+    this.onProgressCallback = callback;
   }
   /**
    * Initialize Pyodide Web Worker.
@@ -30,8 +37,14 @@ class PyodideService {
       console.log("[PyodideService] Initializing Worker...");
       this.worker = new Worker("js/workers/PyodideWorker.js");
       this.worker.onmessage = (e) => {
-        const { type, id: id2, payload, error } = e.data;
+        const { type, id: id2, payload, error, message } = e.data;
         const pending = this.pendingMessages.get(id2);
+        if (type === "progress") {
+          if (this.onProgressCallback) {
+            this.onProgressCallback(message);
+          }
+          return;
+        }
         if (pending) {
           if (type === "error") {
             pending.reject(new Error(error));
