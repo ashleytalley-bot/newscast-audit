@@ -189,7 +189,10 @@ class NewscastAuditApp {
         if (!this.pyodide) {
             this.pyodide = await loadPyodide();
 
-            await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml', 'pydantic']);
+            this.showLoading(LOADING_MESSAGES.loadingLibs);
+            await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml', 'micropip']);
+            const micropip = this.pyodide.pyimport("micropip");
+            await micropip.install('pydantic');
 
             // Load all Python files
             await this.loadPythonFiles();
