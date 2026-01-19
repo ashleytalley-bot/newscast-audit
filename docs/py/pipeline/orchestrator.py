@@ -13,7 +13,7 @@ from pathlib import Path
 import json
 import pandas as pd
 from typing import Dict, Any
-
+from pydantic import ValidationError
 
 from lib.config_dynamic import get_config
 from lib.utils import safe_json_dumps
@@ -21,6 +21,10 @@ from lib.exceptions import NewscastAuditError, ProcessingError, create_error_res
 
 # Import DataQualityTracker from lib
 from lib.quality import DataQualityTracker
+
+# Import schemas for validation
+from lib.schemas.output import ProcessingResult
+from lib.schemas.errors import ErrorResponse
 
 from .base import PipelineStep, PipelineContext
 from .steps import (
@@ -117,7 +121,15 @@ class ProcessingPipeline:
                 "success": False,
                 "error": e.to_dict()
             }
-            return safe_json_dumps(error_response)
+            # Validate error response against schema
+            try:
+                ErrorResponse.model_validate(error_response)
+                # Validation passed, return original dict
+                return safe_json_dumps(error_response)
+            except ValidationError:
+                # If error response doesn't match schema, return it anyway
+                # (better to show a malformed error than fail silently)
+                return safe_json_dumps(error_response)
 
         except Exception as e:
             # Handle unexpected errors
@@ -125,7 +137,14 @@ class ProcessingPipeline:
                 "success": False,
                 "error": create_error_response(e)
             }
-            return safe_json_dumps(error_response)
+            # Validate error response against schema
+            try:
+                ErrorResponse.model_validate(error_response)
+                # Validation passed, return original dict
+                return safe_json_dumps(error_response)
+            except ValidationError:
+                # If error response doesn't match schema, return it anyway
+                return safe_json_dumps(error_response)
 
     def _build_result(self, context: PipelineContext) -> Dict[str, Any]:
         """
@@ -136,6 +155,9 @@ class ProcessingPipeline:
 
         Returns:
             Result dictionary ready for JSON serialization
+
+        Raises:
+            ProcessingError: If result doesn't match expected schema
         """
         # Extract from context
         metric_columns = context.get('metric_columns', [])
@@ -180,4 +202,15 @@ class ProcessingPipeline:
             "quality": context.quality_tracker.to_dict()
         }
 
-        return result
+        # Validate result against Pydantic schema
+        try:
+            ProcessingResult.model_validate(result)
+            # Validation passed, return original dict
+            return result
+        except ValidationError as e:
+            # Schema validation failed - this is a bug in the pipeline
+            raise ProcessingError(
+                message="Pipeline output validation failed",
+                operation="schema_validation",
+                original_error=e
+            )
