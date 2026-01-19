@@ -366,8 +366,20 @@ export class NewscastAuditApp {
             // @ts-ignore
             const dates = result.charts.weekly.full_dates.sort();
             if (dates.length > 0) {
-                const minTimestamp = new Date(dates[0]).getTime();
-                const maxTimestamp = new Date(dates[dates.length - 1]).getTime();
+                let minTimestamp = new Date(dates[0]).getTime();
+                let maxTimestamp = new Date(dates[dates.length - 1]).getTime();
+
+                // Validate timestamps
+                if (isNaN(minTimestamp) || isNaN(maxTimestamp)) {
+                    console.warn("Invalid dates found for slider:", dates);
+                    return;
+                }
+
+                // Handle single-date case (min == max) by adding a buffer
+                if (minTimestamp === maxTimestamp) {
+                    minTimestamp -= 259200000; // 3 days
+                    maxTimestamp += 259200000; // 3 days
+                }
 
                 const slider = document.getElementById('date-slider');
 
@@ -389,7 +401,11 @@ export class NewscastAuditApp {
                     step: 86400000, // 1 day
                     format: {
                         to: function (value) {
-                            return new Date(value).toISOString().split('T')[0];
+                            try {
+                                return new Date(value).toISOString().split('T')[0];
+                            } catch (e) {
+                                return new Date().toISOString().split('T')[0]; // Fallback
+                            }
                         },
                         from: function (value) {
                             return new Date(value).getTime();
