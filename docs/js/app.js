@@ -399,9 +399,17 @@ export class NewscastAuditApp {
                     slider.noUiSlider.destroy();
                 }
 
-                // Ensure strict numbers
-                const startTimestamp = Number(minTimestamp);
-                const endTimestamp = Number(maxTimestamp);
+                // Force a minimum range of 3 days to prevent "stuck" slider
+                const DAY_MS = 86400000;
+                let startTimestamp = Number(minTimestamp);
+                let endTimestamp = Number(maxTimestamp);
+
+                if ((endTimestamp - startTimestamp) < (2 * DAY_MS)) {
+                    // Less than 2 days range? Add buffer
+                    console.log("Expanding small date range for slider comfort");
+                    startTimestamp -= (2 * DAY_MS);
+                    endTimestamp += (2 * DAY_MS);
+                }
 
                 try {
                     // @ts-ignore
