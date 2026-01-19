@@ -399,45 +399,54 @@ export class NewscastAuditApp {
                     slider.noUiSlider.destroy();
                 }
 
-                // @ts-ignore
-                noUiSlider.create(slider, {
-                    start: [minTimestamp, maxTimestamp],
-                    connect: true,
-                    range: {
-                        'min': minTimestamp,
-                        'max': maxTimestamp
-                    },
-                    step: 86400000, // 1 day
-                    format: {
-                        to: function (value) {
-                            try {
-                                return new Date(value).toISOString().split('T')[0];
-                            } catch (e) {
-                                return new Date().toISOString().split('T')[0]; // Fallback
-                            }
+                // Ensure strict numbers
+                const startTimestamp = Number(minTimestamp);
+                const endTimestamp = Number(maxTimestamp);
+
+                try {
+                    // @ts-ignore
+                    noUiSlider.create(slider, {
+                        start: [startTimestamp, endTimestamp],
+                        connect: true,
+                        behaviour: 'drag-tap',
+                        range: {
+                            'min': startTimestamp,
+                            'max': endTimestamp
                         },
-                        from: function (value) {
-                            return new Date(value).getTime();
+                        step: 86400000, // 1 day
+                        format: {
+                            to: function (value) {
+                                try {
+                                    return new Date(value).toISOString().split('T')[0];
+                                } catch (e) {
+                                    return new Date().toISOString().split('T')[0];
+                                }
+                            },
+                            from: function (value) {
+                                return new Date(value).getTime();
+                            }
                         }
-                    }
-                });
+                    });
 
-                const dateValues = document.getElementById('slider-values');
-                const startInput = document.getElementById('filter-start-date');
-                const endInput = document.getElementById('filter-end-date');
+                    const dateValues = document.getElementById('slider-values');
+                    const startInput = document.getElementById('filter-start-date');
+                    const endInput = document.getElementById('filter-end-date');
 
-                // @ts-ignore
-                slider.noUiSlider.on('update', function (values, handle) {
-                    dateValues.innerHTML = `${values[0]}  —  ${values[1]}`;
+                    // @ts-ignore
+                    slider.noUiSlider.on('update', function (values, handle) {
+                        dateValues.innerHTML = `${values[0]}  —  ${values[1]}`;
 
-                    if (handle === 0) {
-                        // @ts-ignore
-                        startInput.value = values[0];
-                    } else {
-                        // @ts-ignore
-                        endInput.value = values[1];
-                    }
-                });
+                        if (handle === 0) {
+                            // @ts-ignore
+                            startInput.value = values[0];
+                        } else {
+                            // @ts-ignore
+                            endInput.value = values[1];
+                        }
+                    });
+                } catch (err) {
+                    console.error("Slider creation failed:", err);
+                }
             }
         }
     }

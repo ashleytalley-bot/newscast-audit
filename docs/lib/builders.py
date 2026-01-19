@@ -119,21 +119,43 @@ def weekly_percent_series(df: pd.DataFrame, metric_columns: List[str],
     # Or average the means? 
     # Standard approach: average of all cells in that block
     
-    if len(cols) > 1:
-        data['score'] = data[cols].mean(axis=1)
-    else:
-        data['score'] = data[cols[0]]
-        
-    weekly = data.groupby('week_start')['score'].mean() * 100
-    weekly_n = data.groupby('week_start')['score'].count() # Count of valid scores per week
+    # Calculate mean for the selected columns
+    # We need to replicate the charts.py logic:
+    # 1. Weekly Average % (Mean of means is okay for the line, but let's be consistent)
+    # 2. P-Bar (Center Line) = Total Yes / Total Opportunities
+    # 3. Weekly N = Total Opportunities in that week
     
-    if weekly.empty:
+    # Calculate row-wise stats first
+    data['row_sum'] = data[cols].sum(axis=1, skipna=True)
+    data['row_count'] = data[cols].count(axis=1) # Opportunities per record
+    
+    # Group by week
+    weekly_group = data.groupby('week_start')
+    
+    # Weekly N = Sum of opportunities in that week
+    weekly_n = weekly_group['row_count'].sum()
+    
+    # Weekly Yes = Sum of Yeses in that week
+    weekly_yes = weekly_group['row_sum'].sum()
+    
+    # Weekly % = Weekly Yes / Weekly N
+    # Handle division by zero
+    weekly_pct = (weekly_yes / weekly_n * 100).fillna(0)
+    
+    # Filter out empty weeks (if any)
+    valid_weeks = weekly_n > 0
+    weekly_pct = weekly_pct[valid_weeks]
+    weekly_n = weekly_n[valid_weeks]
+    
+    if weekly_pct.empty:
         return None
-        
-    # Calculate Center Line (P-bar) for this specific series
-    # P-bar = Sum(Total Score Points) / Sum(Total N)
-    # Using the mean score per row assumption:
-    p_bar = data['score'].mean()
+
+    # Calculate Global P-bar (Center Line)
+    # Total Yes / Total N across all selected data
+    total_yes = data['row_sum'].sum()
+    total_n = data['row_count'].sum()
+    
+    p_bar = total_yes / total_n if total_n > 0 else 0
     center_line = round(p_bar * 100, 1)
     
     # Calculate Control Limits
@@ -153,9 +175,9 @@ def weekly_percent_series(df: pd.DataFrame, metric_columns: List[str],
             lcl_values.append(None)
 
     return {
-        "dates": [d.strftime('%m/%d') for d in weekly.index],
-        "pct": weekly.values.tolist(),
-        "full_dates": [d.strftime('%Y-%m-%d') for d in weekly.index],
+        "dates": [d.strftime('%m/%d') for d in weekly_pct.index],
+        "pct": weekly_pct.values.tolist(),
+        "full_dates": [d.strftime('%Y-%m-%d') for d in weekly_pct.index],
         "n": weekly_n.values.tolist(),
         "center_line": center_line,
         "ucl": ucl_values,
