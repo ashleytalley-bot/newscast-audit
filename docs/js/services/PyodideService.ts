@@ -48,7 +48,7 @@ export class PyodideService {
         });
 
         console.log('[PyodideService] Loading Python packages...');
-        await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml']);
+        await this.pyodide.loadPackage(['pandas', 'numpy', 'pyyaml', 'pydantic']);
 
         console.log('[PyodideService] Loading application Python files...');
         await this.loadPythonFiles();
@@ -152,19 +152,31 @@ export class PyodideService {
     /**
      * Process survey data using the Python pipeline.
      */
-    async processData(jsonData: string): Promise<ProcessingOutput> {
+    async processData(inputData: any): Promise<ProcessingOutput> {
         if (!this.pyodide) {
             throw new Error('Pyodide not initialized. Call initialize() first.');
         }
 
         console.log('[PyodideService] Processing data...');
 
-        const resultJson = await this.pyodide.runPythonAsync(`
-from pipeline.orchestrator import ProcessingPipeline
+        // Convert input to JSON string if it's an object/array (which it is from SheetJS)
+        let jsonStr: string;
+        if (typeof inputData === 'string') {
+            jsonStr = inputData;
+        } else {
+            jsonStr = JSON.stringify(inputData);
+        }
 
-pipeline = ProcessingPipeline()
-result_json = pipeline.execute('''${jsonData.replace(/'/g, "\\'")}''')
-result_json
+        // Pass data safely via globals (avoids syntax errors from string interpolation)
+        this.pyodide.globals.set("input_json", jsonStr);
+
+        const resultJson = await this.pyodide.runPythonAsync(`
+            from py.pipeline.orchestrator import ProcessingPipeline
+            
+            pipeline = ProcessingPipeline()
+            # input_json is populated via globals.set()
+            result_json = pipeline.execute(input_json) 
+            result_json
         `);
 
         return JSON.parse(resultJson) as ProcessingOutput;

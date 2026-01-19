@@ -28,7 +28,7 @@ class PyodideService {
       indexURL: "https://cdn.jsdelivr.net/pyodide/v0.26.1/full/"
     });
     console.log("[PyodideService] Loading Python packages...");
-    await this.pyodide.loadPackage(["pandas", "numpy", "pyyaml"]);
+    await this.pyodide.loadPackage(["pandas", "numpy", "pyyaml", "pydantic"]);
     console.log("[PyodideService] Loading application Python files...");
     await this.loadPythonFiles();
     console.log("[PyodideService] Initializing configuration...");
@@ -109,17 +109,25 @@ class PyodideService {
   /**
    * Process survey data using the Python pipeline.
    */
-  async processData(jsonData) {
+  async processData(inputData) {
     if (!this.pyodide) {
       throw new Error("Pyodide not initialized. Call initialize() first.");
     }
     console.log("[PyodideService] Processing data...");
+    let jsonStr;
+    if (typeof inputData === "string") {
+      jsonStr = inputData;
+    } else {
+      jsonStr = JSON.stringify(inputData);
+    }
+    this.pyodide.globals.set("input_json", jsonStr);
     const resultJson = await this.pyodide.runPythonAsync(`
-from pipeline.orchestrator import ProcessingPipeline
-
-pipeline = ProcessingPipeline()
-result_json = pipeline.execute('''${jsonData.replace(/'/g, "\\'")}''')
-result_json
+            from py.pipeline.orchestrator import ProcessingPipeline
+            
+            pipeline = ProcessingPipeline()
+            # input_json is populated via globals.set()
+            result_json = pipeline.execute(input_json) 
+            result_json
         `);
     return JSON.parse(resultJson);
   }

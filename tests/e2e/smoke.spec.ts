@@ -57,4 +57,38 @@ test.describe('Newscast Audit App', () => {
         // Check that the upload section is visible
         await expect(page.locator('#upload-section')).toBeVisible();
     });
+
+    test('should process mock data', async ({ page }) => {
+        await page.goto('/');
+
+        // Initialize and process mock data
+        const result = await page.evaluate(async () => {
+            // @ts-ignore
+            if (!window.app || !window.app.pyodideService) throw new Error("App not found");
+
+            // @ts-ignore
+            await window.app.pyodideService.initialize();
+
+            // Minimal valid data structure expected by the pipeline
+            const mockData = [
+                {
+                    "Timestamp": "2023-10-27 10:00:00",
+                    "Email": "test@example.com",
+                    "Date": "2023-10-27",
+                    "Newscast": "Morning",
+                    "Story Slug": "Test Story",
+                    "Does the story address the audience as \"you,\" end with \"Here's what you need to know,\" or include a perspective from a specific person?": "Yes"
+                }
+            ];
+
+            // @ts-ignore
+            return await window.app.pyodideService.processData(mockData);
+        });
+
+        expect(result).toBeDefined();
+        // We expect success or at least a structured response, not a crash
+        // If the pipeline validation fails (missing columns), success might be false, 
+        // but we verify we got a result object back, not an exception.
+        expect(result.success).toBeDefined();
+    });
 });
