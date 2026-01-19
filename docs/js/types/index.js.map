@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["index.ts"],
+  "sourcesContent": ["/**\n * Type definitions for Newscast Audit application.\n *\n * These types mirror the Pydantic schemas in docs/lib/schemas/\n * and ensure type safety between Python backend and TypeScript frontend.\n */\n\n// Export all output types\nexport type {\n    ProcessingSummary,\n    ChartData,\n    PerNewscastChart,\n    WeeklyChart,\n    FilterOption,\n    ChartsCollection,\n    TablesCollection,\n    QualityWarning,\n    QualityInfo,\n    QualityReport,\n    ExportData,\n    ConfigPassthrough,\n    ProcessingResult,\n} from './output';\n\n// Export all error types\nexport type {\n    ErrorDetail,\n    ErrorResponse,\n} from './errors';\n\nimport type { ProcessingResult } from './output';\nimport type { ErrorResponse } from './errors';\n\n/**\n * Union type for all possible processing outputs.\n * The pipeline returns either a success result or an error response.\n */\nexport type ProcessingOutput = ProcessingResult | ErrorResponse;\n\n/**\n * Type guard to check if output is a success result.\n */\nexport function isProcessingResult(output: ProcessingOutput): output is ProcessingResult {\n    return output.success === true;\n}\n\n/**\n * Type guard to check if output is an error response.\n */\nexport function isErrorResponse(output: ProcessingOutput): output is ErrorResponse {\n    return output.success === false;\n}\n"],
+  "mappings": "AA0CO,SAAS,mBAAmB,QAAsD;AACrF,SAAO,OAAO,YAAY;AAC9B;AAKO,SAAS,gBAAgB,QAAmD;AAC/E,SAAO,OAAO,YAAY;AAC9B;",
+  "names": []
+}
