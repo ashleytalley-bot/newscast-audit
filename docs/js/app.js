@@ -434,11 +434,14 @@ export class NewscastAuditApp {
             let startTimestamp = Number(minTimestamp);
             let endTimestamp = Number(maxTimestamp);
 
-            if ((endTimestamp - startTimestamp) < (2 * DAY_MS)) {
-                // Less than 2 days range? Add buffer
-                console.log("Expanding small date range for slider comfort");
-                startTimestamp -= (2 * DAY_MS);
-                endTimestamp += (2 * DAY_MS);
+            // Check if duration is too small (less than 3 days)
+            if ((endTimestamp - startTimestamp) < (3 * DAY_MS)) {
+                console.log(`Date range small (${(endTimestamp - startTimestamp) / DAY_MS} days). Expanding for usability.`);
+                // Calculate center point
+                const center = (startTimestamp + endTimestamp) / 2;
+                // Expand 2 days in each direction
+                startTimestamp = center - (2 * DAY_MS);
+                endTimestamp = center + (2 * DAY_MS);
             }
 
             try {

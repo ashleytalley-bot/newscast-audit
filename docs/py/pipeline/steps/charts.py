@@ -159,8 +159,8 @@ class ChartGenerationStep(PipelineStep):
             'weekly': weekly_chart_dict,
             'filter_options': filter_options,
             'date_range': {
-                'min': df['newscast_date_parsed'].min().strftime('%Y-%m-%d') if not df.empty and 'newscast_date_parsed' in df.columns else None,
-                'max': df['newscast_date_parsed'].max().strftime('%Y-%m-%d') if not df.empty and 'newscast_date_parsed' in df.columns else None
+                'min': history_df['newscast_date_parsed'].min().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None,
+                'max': history_df['newscast_date_parsed'].max().strftime('%Y-%m-%d') if not history_df.empty and 'newscast_date_parsed' in history_df.columns else None
             }
         })
 
