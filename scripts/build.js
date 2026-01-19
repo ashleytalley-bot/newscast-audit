@@ -14,12 +14,15 @@ function findTsFiles(dir) {
 }
 
 const serviceFiles = findTsFiles('docs/js/services');
+const moduleFiles = findTsFiles('docs/js/modules');
 const typeFiles = findTsFiles('docs/js/types'); // Types usually don't need compilation unless they have enums or runtime code.
 // For now, let's verify if types have runtime code. Usually interfaces don't emit code.
 // docs/js/types/index.ts usually exports things, so it might need compilation if used as a module.
 
 const entryPoints = [
+    'docs/js/app.ts',
     ...serviceFiles,
+    ...moduleFiles,
     ...typeFiles
 ];
 

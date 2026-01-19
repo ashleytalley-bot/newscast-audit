@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["config.ts"],
+  "sourcesContent": ["// @ts-check\n\n/**\n * Chart configuration defaults\n */\nexport const CHART_DEFAULTS = {\n    fonts: {\n        family: '-apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif',\n        size: 12\n    },\n    margins: {\n        overall: { b: 120, t: 60, l: 60, r: 20 },\n        perNewscast: { l: 200, r: 60, t: 20, b: 50 }\n    },\n    axisRange: [0, 110],\n    responsive: true\n} as const;\n\n/**\n * User-facing loading messages\n */\nexport const LOADING_MESSAGES = {\n    readingFile: 'Reading Excel file...',\n    initPython: 'Initializing Python environment...',\n    loadingLibs: 'Loading data processing libraries...',\n    processing: 'Processing data...',\n    rendering: 'Rendering charts...'\n} as const;\n"],
+  "mappings": "AAKO,MAAM,iBAAiB;AAAA,EAC1B,OAAO;AAAA,IACH,QAAQ;AAAA,IACR,MAAM;AAAA,EACV;AAAA,EACA,SAAS;AAAA,IACL,SAAS,EAAE,GAAG,KAAK,GAAG,IAAI,GAAG,IAAI,GAAG,GAAG;AAAA,IACvC,aAAa,EAAE,GAAG,KAAK,GAAG,IAAI,GAAG,IAAI,GAAG,GAAG;AAAA,EAC/C;AAAA,EACA,WAAW,CAAC,GAAG,GAAG;AAAA,EAClB,YAAY;AAChB;AAKO,MAAM,mBAAmB;AAAA,EAC5B,aAAa;AAAA,EACb,YAAY;AAAA,EACZ,aAAa;AAAA,EACb,YAAY;AAAA,EACZ,WAAW;AACf;",
+  "names": []
+}

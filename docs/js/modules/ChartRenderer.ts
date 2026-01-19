@@ -1,0 +1,283 @@
+// @ts-check
+import { CHART_DEFAULTS } from './config.js';
+
+// Global declaration for Plotly
+declare const Plotly: any;
+
+export class ChartRenderer {
+    /**
+     * Create a Plotly bar trace
+     */
+    private createBarTrace(labels: string[], values: number[], colors: string[], isHorizontal: boolean = false) {
+        const baseTrace: any = {
+            type: 'bar',
+            marker: { color: colors },
+            text: values.map(v => v + '%'),
+            textposition: 'outside'
+        };
+
+        if (isHorizontal) {
+            return { ...baseTrace, y: labels, x: values, orientation: 'h' };
+        } else {
+            return { ...baseTrace, x: labels, y: values };
+        }
+    }
+
+    /**
+     * Create Plotly layout configuration
+     */
+    private createLayout(title: string | null, config: any, isHorizontal: boolean = false) {
+        const margins = isHorizontal ? CHART_DEFAULTS.margins.perNewscast
+            : CHART_DEFAULTS.margins.overall;
+        const axis = isHorizontal ? 'xaxis' : 'yaxis';
+
+        const layout: any = {
+            title,
+            [axis]: {
+                title: 'Percent Yes',
+                range: CHART_DEFAULTS.axisRange,
+                ticksuffix: '%'
+            },
+            margin: margins,
+            font: {
+                family: CHART_DEFAULTS.fonts.family,
+                color: config.palette.primary
+            }
+        };
+
+        if (!isHorizontal) {
+            layout.xaxis = { tickangle: -35 };
+        }
+
+        return layout;
+    }
+
+    /**
+     * Render overall metrics chart
+     */
+    public renderOverallChart(containerId: string, chartData: any, config: any) {
+        const trace = this.createBarTrace(chartData.labels, chartData.values, chartData.colors);
+        const layout = this.createLayout(`Overall Audit Metrics (n=${chartData.n})`, config);
+
+        Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+    }
+
+    /**
+     * Render per-newscast charts
+     */
+    public renderPerNewscastCharts(containerId: string, perNewscastData: any[], config: any) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (!perNewscastData || perNewscastData.length === 0) {
+            container.innerHTML = '<p>No newscast data available</p>';
+            return;
+        }
+
+        container.innerHTML = '';
+
+        perNewscastData.forEach((data, index) => {
+            const chartId = `chart-newscast-${index}`;
+            const card = document.createElement('div');
+            card.className = 'chart-card';
+            card.innerHTML = `<h3>${data.newscast} (n=${data.n})</h3><div id="${chartId}" class="chart-container"></div>`;
+            container.appendChild(card);
+
+            const trace = this.createBarTrace(data.labels, data.values, data.colors, true);
+            const layout = this.createLayout(null, config, true);
+
+            Plotly.newPlot(chartId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+        });
+    }
+
+    /**
+     * Render weekly trend chart
+     */
+    public renderWeeklyChart(containerId: string, weeklyData: any, config: any) {
+        const container = document.getElementById(containerId);
+        if (!container || !weeklyData) return;
+
+        const commonLineProps = {
+            width: 3,
+            shape: 'linear' // Straight lines as requested
+        };
+
+        const traces: any[] = [
+            {
+                x: weeklyData.dates,
+                y: weeklyData.values,
+                type: 'scatter',
+                mode: 'lines+markers',
+                name: 'Performance',
+                line: {
+                    color: config.palette.primary,
+                    ...commonLineProps
+                },
+                marker: { size: 12 }, // Bigger points
+                text: weeklyData.full_dates,
+                hovertemplate: 'Week of %{text}: %{y}%<extra></extra>',
+                connectgaps: true
+            }
+        ];
+
+        // Add P-Chart Control Limits if available
+        if (weeklyData.center_line !== null && weeklyData.center_line !== undefined) {
+            traces.push({
+                x: weeklyData.dates,
+                // Create constant line for center line
+                y: weeklyData.dates.map(() => weeklyData.center_line),
+                type: 'scatter',
+                mode: 'lines',
+                name: 'Average (CL)',
+                line: {
+                    color: '#2e7d32', // Green
+                    width: 2,
+                    dash: 'solid'
+                },
+                hoverinfo: 'name+y',
+                connectgaps: true
+            });
+        }
+
+        if (weeklyData.ucl && weeklyData.ucl.length > 0) {
+            traces.push({
+                x: weeklyData.dates,
+                y: weeklyData.ucl,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'UCL',
+                line: {
+                    color: '#9e9e9e', // Gray
+                    width: 2,
+                    dash: 'dot',  // Dotted
+                    shape: 'hv' // Stepped line for limits
+                },
+                hoverinfo: 'name+y',
+                opacity: 0.7,
+                connectgaps: true
+            });
+        }
+
+        if (weeklyData.lcl && weeklyData.lcl.length > 0) {
+            traces.push({
+                x: weeklyData.dates,
+                y: weeklyData.lcl,
+                type: 'scatter',
+                mode: 'lines',
+                name: 'LCL',
+                line: {
+                    color: '#9e9e9e', // Gray
+                    width: 2,
+                    dash: 'dot', // Dotted
+                    shape: 'hv'
+                },
+                hoverinfo: 'name+y',
+                opacity: 0.7,
+                connectgaps: true
+            });
+        }
+
+        const layout = {
+            title: 'Weekly Performance Trend',
+            yaxis: {
+                title: 'Percent Yes',
+                range: CHART_DEFAULTS.axisRange,
+                ticksuffix: '%'
+            },
+            margin: CHART_DEFAULTS.margins.overall,
+            font: {
+                family: CHART_DEFAULTS.fonts.family,
+                color: config.palette.primary
+            }
+        };
+
+        Plotly.newPlot(containerId, traces, layout, { responsive: CHART_DEFAULTS.responsive });
+    }
+
+    public renderHeatmap(containerId: string, perNewscastData: any[], config: any) {
+        const container = document.getElementById(containerId);
+        if (!container || !perNewscastData || perNewscastData.length === 0) return;
+
+        // Extract all newscast names for Y-axis ordering (Reverse for top-down)
+        const allNewscasts = perNewscastData.map(d => d.newscast).reverse();
+
+        // Extract all metric labels (assume consistent across newscasts, use first one)
+        const allMetrics = perNewscastData[0].labels;
+
+        // Construct 2D array for Z values [newscast][metric]
+        // We match order of allNewscasts (reversed original data)
+        const zValues: number[][] = [];
+        const customData: number[][] = []; // To hold 'n' for hover
+
+        // Iterate in reverse to match allNewscasts order
+        for (let i = perNewscastData.length - 1; i >= 0; i--) {
+            const rowData = perNewscastData[i];
+            zValues.push(rowData.values);
+            // Create array of N values matching the length of values
+            customData.push(rowData.values.map(() => rowData.n));
+        }
+
+        const trace = {
+            z: zValues,
+            x: allMetrics,
+            y: allNewscasts,
+            customdata: customData,
+            type: 'heatmap',
+            colorscale: [
+                [0, '#d32f2f'],   // Red
+                [0.5, '#fbc02d'], // Yellow
+                [1, '#388e3c']    // Green
+            ],
+            zmin: 0,
+            zmax: 100,
+            xgap: 1,
+            ygap: 1,
+            hovertemplate:
+                `Newscast: %{y}<br>` +
+                `Metric: %{x}<br>` +
+                `Yes: %{z}%<br>` +
+                `n: %{customdata}<extra></extra>`
+        };
+
+        const layout = {
+            // title: 'Performance Heatmap', // Removed to avoid overlap with HTML header
+            xaxis: {
+                tickangle: -30,
+                automargin: true,
+                side: 'top'
+            },
+            yaxis: {
+                automargin: true,
+                categoryarray: allNewscasts,
+                categoryorder: 'array'
+            },
+            margin: {
+                l: 150, r: 20, b: 50, t: 80 // Reduced top margin slightly as title is gone
+            }
+        };
+
+        Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+    }
+
+    /**
+     * Capture chart as image (for PowerPoint export)
+     */
+    public async captureChartAsImage(elementId: string, width: number = 800, height: number = 500): Promise<string | null> {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.warn(`Chart element ${elementId} not found`);
+            return null;
+        }
+
+        try {
+            return await Plotly.toImage(element, {
+                format: 'png',
+                width,
+                height
+            });
+        } catch (error) {
+            console.error(`Error capturing chart ${elementId}:`, error);
+            return null;
+        }
+    }
+}
