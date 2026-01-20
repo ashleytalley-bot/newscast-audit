@@ -267,6 +267,9 @@
                 const appModulePath = './' + (manifest['js/app.js'] || 'js/app.js');
 
                 // Dynamically import the app module
+                // @ts-ignore
+                window.lastAttemptedPath = appModulePath;
+                console.log("Attempting to import:", appModulePath);
                 const module = await import(appModulePath);
                 const { NewscastAuditApp } = module;
 
@@ -281,9 +284,18 @@
                 const errorDiv = document.getElementById('error-message');
                 if (errorDiv) {
                     errorDiv.classList.remove('hidden');
+                    // Fetch check to see if it's network or eval
+                    let additionalInfo = "";
+                    try {
+                        // @ts-ignore
+                        const path = window.lastAttemptedPath || "unknown";
+                        additionalInfo += `<br>Attempted Path: ${path}`;
+                    } catch (ex) { }
+
                     errorDiv.innerHTML = `<strong>Failed to load application updates.</strong><br>
-                    Technical Details: ${e.message}<br>
-                    <small>${e.stack || ''}</small>`;
+                    Technical Details: ${e.message}
+                    ${additionalInfo}
+                    <br><small>${e.stack || ''}</small>`;
                 }
             }
         })();
