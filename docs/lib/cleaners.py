@@ -116,7 +116,7 @@ def convert_to_numeric(v):
     Convert survey responses into 1/0/NA.
     """
     if pd.isna(v):
-        return pd.NA
+        return 0 # User requested blanks/swapped to 0
 
     s = str(v).strip().lower()
 
@@ -128,9 +128,13 @@ def convert_to_numeric(v):
     if s in ('no', 'n', 'false', '0'):
         return 0
 
-    # N/A or missing
-    if s in ('n/a', 'na', 'none', ''):
+    # N/A explicitly marked should still be NA
+    if s in ('n/a', 'na', 'none'):
         return pd.NA
+
+    # Blanks/Empty strings now treated as "No" (0) per user request
+    if s == '':
+        return 0
 
     # Try numeric parsing
     try:
