@@ -763,7 +763,8 @@ h4,
 
 .table-card {
     background: var(--color-white);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
     padding: var(--spacing-lg);
 }
@@ -833,7 +834,8 @@ h4,
 
 .chart-card {
     background: var(--color-white);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
     padding: var(--spacing-lg);
 }
@@ -1052,6 +1054,76 @@ h4,
     .filter-select {
         width: 100%;
         min-width: unset;
+    }
+}
+
+/* ==========================================================================
+   DARK MODE
+   ========================================================================== */
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        /* Backgrounds */
+        --color-bg: #0f172a;
+        --color-bg-soft: #1e293b;
+        --color-bg-card: #1e293b;
+        --color-white: #1e293b;
+        /* Re-map white to dark card bg */
+
+        /* Borders */
+        --color-border: #334155;
+        --color-border-strong: #475569;
+
+        /* Text */
+        --color-text: #f1f5f9;
+        --color-text-secondary: #94a3b8;
+        --color-muted: #64748b;
+        --color-heading: #f8fafc;
+
+        /* Brand Colors (Adjusted for dark mode contrast) */
+        --color-primary: #38bdf8;
+        /* Lighter blue */
+        --color-primary-hover: #0ea5e9;
+        --color-primary-light: rgba(56, 189, 248, 0.1);
+        --color-secondary: #7dd3fc;
+
+        /* Shadows */
+        --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Specific Component Overrides */
+    .metric-card,
+    .chart-card,
+    .table-card,
+    .upload-box,
+    .summary-item {
+        background-color: var(--color-bg-card);
+        border-color: var(--color-border);
+    }
+
+    .table-container th {
+        background-color: #0f172a;
+        /* Match body bg */
+        color: var(--color-text-secondary);
+    }
+
+    .table-container tr:hover td {
+        background-color: rgba(56, 189, 248, 0.05);
+    }
+
+    .upload-box {
+        background-color: var(--color-bg-card);
+    }
+
+    .upload-box:hover {
+        background-color: #0f172a;
+        border-color: var(--color-primary);
+    }
+
+    /* Chart specific adjustments */
+    .chart-container text {
+        fill: var(--color-text-secondary) !important;
     }
 }
 
