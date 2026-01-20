@@ -264,7 +264,10 @@
                 const manifest = await response.json();
 
                 // Get the latest hashed filename for app.js
-                const appModulePath = './' + (manifest['js/app.js'] || 'js/app.js');
+                // We append a timestamp to the module URL to prevent the browser from serving a cached 404
+                // or stale version if the build just updated.
+                const rawPath = manifest['js/app.js'] || 'js/app.js';
+                const appModulePath = './' + rawPath + '?v=' + Date.now();
 
                 // Dynamically import the app module
                 // @ts-ignore
