@@ -870,7 +870,8 @@ border-color var(--transition-normal);
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
     padding: var(--spacing-lg);
-    /* overflow: hidden; Removed for E2E visibility */
+    overflow: hidden;
+    /* Prevent content bleeding (Fix for large margins) */
 }
 
 .chart-card h3 {
@@ -886,6 +887,10 @@ border-color var(--transition-normal);
 
 .chart-container {
     min-height: 400px;
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+    /* Fix for Plotly bleeding */
 }
 
 .section-title {
