@@ -15,10 +15,6 @@ class ChartRenderer {
       chartData.values,
       chartData.n
     );
-    layout.title = {
-      text: `Overall Audit Metrics (n=${chartData.n})`,
-      x: 0.05
-    };
     Plotly.newPlot(containerId, [trace], layout, PLOTLY_CONFIG);
   }
   /**
@@ -63,7 +59,6 @@ class ChartRenderer {
       weeklyData.ucl,
       weeklyData.lcl
     );
-    layout.title = "Weekly Performance Trend";
     Plotly.newPlot(containerId, traces, layout, PLOTLY_CONFIG);
   }
   /**

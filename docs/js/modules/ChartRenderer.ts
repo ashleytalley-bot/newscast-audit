@@ -22,11 +22,7 @@ export class ChartRenderer {
             chartData.n
         );
 
-        // Add title dynamically if needed, or rely on HTML headers
-        (layout as any).title = {
-            text: `Overall Audit Metrics (n=${chartData.n})`,
-            x: 0.05,
-        };
+        // Title removed to avoid duplication with card header
 
         Plotly.newPlot(containerId, [trace], layout, PLOTLY_CONFIG);
     }
@@ -82,7 +78,7 @@ export class ChartRenderer {
             weeklyData.lcl
         );
 
-        (layout as any).title = 'Weekly Performance Trend';
+        // Title removed to avoid duplication with card header
 
         Plotly.newPlot(containerId, traces, layout, PLOTLY_CONFIG);
     }

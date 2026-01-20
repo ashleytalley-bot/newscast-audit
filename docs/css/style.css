@@ -1090,6 +1090,24 @@ h4,
         /* Shadows */
         --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
         --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+
+        /* Performance Scale (Dark Mode) */
+        --color-perf-excellent: #34d399;
+        /* Green-400 */
+        --color-perf-excellent-bg: #064e3b;
+        /* Green-900 */
+        --color-perf-good: #38bdf8;
+        /* Sky-400 */
+        --color-perf-good-bg: #0c4a6e;
+        /* Sky-900 */
+        --color-perf-moderate: #fbbf24;
+        /* Amber-400 */
+        --color-perf-moderate-bg: #451a03;
+        /* Amber-950 */
+        --color-perf-poor: #f87171;
+        /* Red-400 */
+        --color-perf-poor-bg: #450a0a;
+        /* Red-900 */
     }
 
     /* Specific Component Overrides */
