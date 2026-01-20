@@ -91,9 +91,15 @@ async function build() {
 
         // Generate asset manifest with content hashes for cache-busting
         console.log('Generating asset manifest with content hashes...');
+        const appJsHash = computeFileHash('docs/js/app.js');
+        const appJsName = `js/app.${appJsHash}.js`;
+
+        // Rename the main bundle to include hash
+        fs.renameSync('docs/js/app.js', path.join('docs', appJsName));
+
         const assetManifest = {
             // JavaScript files
-            'js/app.js': computeFileHash('docs/js/app.js'),
+            'js/app.js': appJsName, // Update mapping to point to hashed name
 
             // Python manifests (dynamic)
             'py-files.json': computeFileHash('docs/py-files.json'),

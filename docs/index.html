@@ -253,24 +253,39 @@
     </script>
     <script type="module">
         /**
-         * Cache-Busting: The build script now generates asset-manifest.json with content hashes.
-         * Current version uses content hash: 9205efbe
-         * Future enhancement: Load from manifest dynamically to eliminate manual updates.
+         * Dynamic Module Loader with Cache Busting
+         * Fetches asset-manifest.json to get the latest hashed filename for app.js
          */
-        import { NewscastAuditApp } from './js/app.js?v=9205efbe';
-        import { errorUI } from './js/modules/ErrorUI.js';
-
-        document.addEventListener('DOMContentLoaded', () => {
+        (async function boot() {
             try {
+                // Fetch manifest with timestamp to bypass cache
+                const response = await fetch('./asset-manifest.json?t=' + Date.now());
+                if (!response.ok) throw new Error("Manifest load failed");
+                const manifest = await response.json();
+
+                // Get the latest hashed filename for app.js
+                const appModulePath = './' + (manifest['js/app.js'] || 'js/app.js');
+
+                // Dynamically import the app module
+                const module = await import(appModulePath);
+                const { NewscastAuditApp } = module;
+                const { errorUI } = await import('./js/modules/ErrorUI.js');
+
+                // Initialize App
                 const app = new NewscastAuditApp();
                 // @ts-ignore
                 window.app = app;
                 app.init();
+
             } catch (e) {
-                console.error("App Init Error:", e);
-                errorUI.showError(e);
+                console.error("Critical Boot Error:", e);
+                const errorDiv = document.getElementById('error-message');
+                if (errorDiv) {
+                    errorDiv.classList.remove('hidden');
+                    errorDiv.textContent = "Failed to load application updates. Please reload.";
+                }
             }
-        });
+        })();
     </script>
 </body>
 
