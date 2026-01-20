@@ -140,7 +140,8 @@ class AggregationStep(PipelineStep):
                 # Count non-null values in metric columns relative to total columns
                 numeric_cols = [c for c in metric_columns if c in df.columns]
                 
-                most_missed_series = None
+                # Initialize with explicit None type
+                most_missed_series: pd.Series | None = None
                 
                 if numeric_cols:
                     # Metric A: Completeness %
