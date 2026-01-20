@@ -508,10 +508,16 @@ h4,
 }
 
 #slider-values {
-    color: rgba(255, 255, 255, 0.9);
-    /* White text for header */
+    color: #ffffff;
+    /* Pure White */
     font-size: 0.85rem;
     min-width: 140px;
+    font-weight: 500;
+}
+
+/* Ensure noUiSlider pips/labels are also white if used */
+.noUi-value {
+    color: #ffffff !important;
 }
 
 .noUi-connect {
@@ -1155,6 +1161,12 @@ h4,
         padding: var(--spacing-lg) 0;
         color: var(--color-text-light);
         font-size: 0.875rem;
+        width: 100%;
+    }
+
+    .footer p {
+        margin: 0;
+        text-align: center;
     }
 
     /* Enhanced Hover States */
