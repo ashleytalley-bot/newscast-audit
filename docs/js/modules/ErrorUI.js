@@ -14,7 +14,7 @@ class ErrorUI {
       container.className = "warnings-container hidden";
       const resultsSection = document.getElementById("results-section");
       if (resultsSection) {
-        resultsSection.insertBefore(container, resultsSection.firstChild);
+        resultsSection.appendChild(container);
       }
     }
     return container;

@@ -78,7 +78,13 @@ function getOverallBarConfig(labels, values, n) {
     textfont: {
       family: FONTS.mono,
       size: 13,
-      color: "#ffffff"
+      color: values.map((v) => {
+        if (v >= 90)
+          return "#ffffff";
+        if (v >= 50)
+          return "#000000";
+        return "#ffffff";
+      })
     },
     hovertemplate: "<b>%{x}</b><br>%{y:.1f}%<extra></extra>",
     customdata: Array(labels.length).fill(n)
@@ -218,9 +224,10 @@ function getHeatmapConfig(zValues, xLabels, yLabels, hoverText) {
     text: hoverText,
     texttemplate: "%{z:.0f}",
     textfont: {
-      size: 11,
+      size: 12,
       family: FONTS.mono,
-      color: "#374151"
+      color: "#000000"
+      // Pure black for maximum contrast on pastel backgrounds
     },
     showscale: true
   };
@@ -231,14 +238,16 @@ function getHeatmapConfig(zValues, xLabels, yLabels, hoverText) {
     xaxis: {
       ...baseLayout.xaxis,
       side: "top",
-      tickangle: -45
+      tickangle: -45,
+      automargin: true
     },
     yaxis: {
       ...baseLayout.yaxis,
       autorange: "reversed",
       tickfont: { size: 11 }
     },
-    margin: { t: 100, r: 80, b: 20, l: 120 }
+    // Increase top margin for rotated labels
+    margin: { t: 160, r: 80, b: 20, l: 120 }
   };
   return { trace, layout };
 }
@@ -258,7 +267,13 @@ function getPerNewscastBarConfig(newscast, labels, values, n) {
     textfont: {
       family: FONTS.mono,
       size: 11,
-      color: "#ffffff"
+      color: values.map((v) => {
+        if (v >= 90)
+          return "#ffffff";
+        if (v >= 50)
+          return "#000000";
+        return "#ffffff";
+      })
     },
     hovertemplate: "<b>%{y}</b><br>%{x:.1f}%<extra></extra>"
   };

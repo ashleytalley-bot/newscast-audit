@@ -33,7 +33,7 @@ class TableRenderer {
    * Uses the "Editorial Data Studio" performance scale
    */
   getCellClass(columnName, value) {
-    if (columnName === "Yes %" || columnName === "Complete %") {
+    if (columnName === "Yes %" || columnName === "Complete %" || columnName === "Completeness") {
       if (typeof value !== "number")
         return "";
       if (value >= 90)
@@ -50,7 +50,7 @@ class TableRenderer {
    * Format cell value for display
    */
   formatCellValue(columnName, value) {
-    if (columnName === "Yes %" || columnName === "Complete %") {
+    if (columnName === "Yes %" || columnName === "Complete %" || columnName === "Completeness") {
       return typeof value === "number" ? value.toFixed(1) + "%" : value;
     }
     return String(value);
