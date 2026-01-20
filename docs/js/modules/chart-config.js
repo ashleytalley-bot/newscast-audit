@@ -79,7 +79,7 @@ function getOverallBarConfig(labels, values, n) {
       family: FONTS.mono,
       size: 13,
       color: values.map((v) => {
-        if (v >= 90)
+        if (v >= 80)
           return "#ffffff";
         if (v >= 50)
           return "#000000";
@@ -268,7 +268,7 @@ function getPerNewscastBarConfig(newscast, labels, values, n) {
       family: FONTS.mono,
       size: 11,
       color: values.map((v) => {
-        if (v >= 90)
+        if (v >= 80)
           return "#ffffff";
         if (v >= 50)
           return "#000000";
@@ -296,7 +296,8 @@ function getPerNewscastBarConfig(newscast, labels, values, n) {
       ...baseLayout.yaxis,
       automargin: true
     },
-    margin: { t: 40, r: 20, b: 40, l: 150 },
+    // Increased left margin to 200 to accommodate long labels
+    margin: { t: 40, r: 20, b: 40, l: 200 },
     height: Math.max(200, labels.length * 35 + 80)
   };
   return { trace, layout };

@@ -1,11 +1,16 @@
 const COLORS = {
-  // Brand
-  primary: "#045ea8",
-  primaryHover: "#034a85",
-  primaryLight: "#e8f4fc",
-  secondary: "#00458c",
-  accent: "#f36f21",
-  accentHover: "#d85d15",
+  // Brand - TEGNA Theme
+  primary: "#FF5F00",
+  // TEGNA Primary Orange (Action)
+  primaryHover: "#CC4C00",
+  primaryLight: "#FFF0E5",
+  secondary: "#001489",
+  // TEGNA Blue (Brand)
+  header: "#001246",
+  // TEGNA Deep Navy (Header)
+  accent: "#001489",
+  // Blue as accent
+  accentHover: "#000B3A",
   alert: "#dc2626",
   alertLight: "#fee2e2",
   // Performance scale
@@ -19,16 +24,24 @@ const COLORS = {
     poor: "#dc2626",
     poorBg: "#fee2e2"
   },
-  // Chart palette
+  // Chart palette - TEGNA Oriented
   chartPalette: [
-    "#045ea8",
-    "#0891b2",
-    "#0d9488",
-    "#059669",
-    "#65a30d",
-    "#ca8a04",
-    "#ea580c",
+    "#001489",
+    // Navy (Brand)
+    "#FF5F00",
+    // Orange (Primary)
+    "#00458c",
+    // Medium Blue
+    "#fb923c",
+    // Light Orange
+    "#334155",
+    // Slate 700
+    "#94a3b8",
+    // Slate 400
+    "#0ea5e9",
+    // Sky Blue
     "#dc2626"
+    // Red (Alert)
   ],
   // UI
   ui: {

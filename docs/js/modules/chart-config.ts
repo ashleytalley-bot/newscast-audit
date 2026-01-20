@@ -102,10 +102,10 @@ export function getOverallBarConfig(labels: string[], values: number[], n: numbe
             size: 13,
             color: values.map(v => {
                 // Excellent (Green) -> White
-                // Good (Blue) -> Black (for better contrast)
-                // Moderate (Yellow) -> Black
+                // Good (Blue) -> White
+                // Moderate (Orange) -> Black
                 // Poor (Red) -> White
-                if (v >= 90) return '#ffffff';
+                if (v >= 80) return '#ffffff';
                 if (v >= 50) return '#000000';
                 return '#ffffff';
             }),
@@ -332,9 +332,18 @@ export function getPerNewscastBarConfig(
             family: FONTS.mono,
             size: 11,
             color: values.map(v => {
-                if (v >= 90) return '#ffffff';
-                if (v >= 50) return '#000000';
-                return '#ffffff';
+                // High contrast text colors
+                // TEGNA Blue/Green (Dark) -> White text
+                // TEGNA Orange/Yellow (Light) -> Black text
+                // Thresholds align with theme colors: 
+                // >= 90 (Green/Excellent) -> White
+                // >= 80 (Blue/Good) -> White
+                // >= 50 (Orange/Moderate) -> Black (Orange needs black for contrast)
+                // < 50 (Red/Poor) -> White
+
+                if (v >= 80) return '#ffffff'; // Green/Blue -> White
+                if (v >= 50) return '#000000'; // Orange -> Black
+                return '#ffffff';              // Red -> White
             }),
         },
         hovertemplate: '<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
@@ -359,7 +368,8 @@ export function getPerNewscastBarConfig(
             ...baseLayout.yaxis,
             automargin: true,
         },
-        margin: { t: 40, r: 20, b: 40, l: 150 },
+        // Increased left margin to 200 to accommodate long labels
+        margin: { t: 40, r: 20, b: 40, l: 200 },
         height: Math.max(200, labels.length * 35 + 80),
     };
 
