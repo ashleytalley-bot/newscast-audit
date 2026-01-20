@@ -307,12 +307,16 @@ export class NewscastAuditApp {
         }
 
         // Render UI
+        // Render UI
         this.showLoading(LOADING_MESSAGES.rendering);
         this.processedData = successResult;
+
+        // Reveal results section FIRST so Plotly can calculate correct width
+        this.showResults();
+
         this.renderResults();
 
         this.hideLoading();
-        this.showResults();
 
         // Initialize Slider
         this.initializeDateFilters(successResult);
