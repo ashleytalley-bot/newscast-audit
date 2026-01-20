@@ -21,6 +21,7 @@ interface DOMElements {
     loadingIndicator: HTMLElement;
     loadingText: HTMLElement;
     errorMessage: HTMLElement;
+    headerControls: HTMLElement;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -53,7 +54,8 @@ export class NewscastAuditApp {
             fileInput: document.getElementById('file-input') as HTMLInputElement,
             loadingIndicator: document.getElementById('loading-indicator')!,
             loadingText: document.getElementById('loading-text')!,
-            errorMessage: document.getElementById('error-message')!
+            errorMessage: document.getElementById('error-message')!,
+            headerControls: document.getElementById('header-controls')!
         };
 
         this.validateDom();
@@ -386,6 +388,11 @@ export class NewscastAuditApp {
     public showResults() {
         this.dom.uploadSection.classList.add('hidden');
         this.dom.resultsSection.classList.remove('hidden');
+
+        // Show header controls
+        this.dom.headerControls.classList.remove('hidden');
+        this.dom.headerControls.style.display = 'flex';
+
         // Trigger animations
         requestAnimationFrame(() => {
             this.dom.resultsSection.classList.add('is-visible');
@@ -396,6 +403,11 @@ export class NewscastAuditApp {
         this.dom.resultsSection.classList.add('hidden');
         this.dom.resultsSection.classList.remove('is-visible');
         this.dom.uploadSection.classList.remove('hidden');
+
+        // Hide header controls
+        this.dom.headerControls.classList.add('hidden');
+        this.dom.headerControls.style.display = 'none';
+
         this.dom.fileInput.value = '';
         this.hideError();
         this.errorUI.clearAll();

@@ -438,23 +438,109 @@ h4,
 }
 
 /* Header */
-/* Brand Colors (TEGNA Official) */
---color-primary: #FF5F00;
-/* TEGNA Orange */
---color-primary-hover: #e65600;
---color-primary-light: rgba(255, 95, 0, 0.1);
+.header {
+    background-color: var(--color-header);
+    /* TEGNA Navy */
+    /* Matches TEGNA website header */
+    border-bottom: none;
+    padding: var(--spacing-sm) 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    transition: background-color var(--transition-normal),
+        border-color var(--transition-normal);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
 
---color-secondary: #010a48;
-/* TEGNA Deep Navy (Extracted from site) */
---color-header: #010a48;
-/* Matches TEGNA website header */
-border-bottom: 1px solid var(--color-border);
-padding: var(--spacing-md) 0;
-position: sticky;
-top: 0;
-z-index: 100;
-transition: background-color var(--transition-normal),
-border-color var(--transition-normal);
+.header-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+    max-width: 1400px;
+    /* Increased max-width for controls */
+    margin: 0 auto;
+    padding: 0 var(--spacing-lg);
+}
+
+.header-branding {
+    display: flex;
+    align-items: center;
+}
+
+.logo {
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--color-white);
+}
+
+.header-title {
+    font-size: 1.125rem;
+    color: rgba(255, 255, 255, 0.9);
+    padding-left: var(--spacing-lg);
+    border-left: 1px solid rgba(255, 255, 255, 0.3);
+    margin-left: var(--spacing-lg);
+}
+
+/* Header Controls (Date Slider + Buttons) */
+.header-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xl);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.filter-controls {
+    display: flex;
+    align-items: center;
+}
+
+.header-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+/* Specific overrides for slider in header */
+#date-slider {
+    width: 250px;
+    margin: 0 15px;
+}
+
+#slider-values {
+    color: rgba(255, 255, 255, 0.9);
+    /* White text for header */
+    font-size: 0.85rem;
+    min-width: 140px;
+}
+
+.noUi-connect {
+    background: var(--color-primary);
+    /* Orange slider fill */
+}
+
+/* Ghost Button for Header */
+.btn-ghost {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--color-white);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 0.4rem 0.8rem;
+    font-size: 0.875rem;
+}
+
+.btn-ghost:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.4);
+    transform: translateY(-1px);
+}
+
+.btn-ghost svg {
+    color: var(--color-primary);
+    /* Orange Icons */
+}
+
+.btn-text {
+    margin-left: 6px;
 }
 
 .header-content {
@@ -1063,6 +1149,14 @@ border-color var(--transition-normal);
         }
     }
 
+    /* Footer */
+    .footer {
+        text-align: center;
+        padding: var(--spacing-lg) 0;
+        color: var(--color-text-light);
+        font-size: 0.875rem;
+    }
+
     /* Enhanced Hover States */
     .btn:hover {
         transform: translateY(-1px);
@@ -1132,6 +1226,16 @@ border-color var(--transition-normal);
 
 
 
+
+    /* Footer Styles */
+    .footer {
+        text-align: center;
+        padding: var(--spacing-lg) 0;
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+        margin-top: auto;
+        border-top: 1px solid var(--color-border);
+    }
 
     /* Print styles */
     @media print {
