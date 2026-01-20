@@ -488,8 +488,10 @@ h4,
 }
 
 .upload-box {
-    background: var(--color-white);
-    border: 2px dashed var(--color-border);
+    background: var(--color-secondary);
+    /* TEGNA Navy - Force dark bg */
+    border: 2px dashed var(--color-primary);
+    /* Orange border */
     border-radius: var(--radius-lg);
     padding: var(--spacing-xxl);
     text-align: center;
@@ -497,32 +499,35 @@ h4,
     transition: all var(--transition-normal);
     max-width: 500px;
     width: 100%;
+    box-shadow: var(--shadow-lg);
 }
 
 .upload-box:hover,
 .upload-box.drag-over {
-    border-color: var(--color-primary);
-    background-color: var(--color-bg-soft);
-}
-
-.upload-box.drag-over {
+    border-color: var(--color-white);
+    background-color: var(--color-header-bg);
+    /* Darker Navy */
     transform: scale(1.02);
 }
 
 .upload-icon {
     color: var(--color-primary);
+    /* Orange Icon */
     margin-bottom: var(--spacing-lg);
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
 }
 
 .upload-box h2 {
     font-size: 1.5rem;
-    font-weight: 600;
+    font-weight: 700;
     margin-bottom: var(--spacing-sm);
-    color: var(--color-text);
+    color: #ffffff;
+    /* White text */
 }
 
 .upload-box p {
-    color: var(--color-text-secondary);
+    color: rgba(255, 255, 255, 0.8);
+    /* White-ish text */
     margin-bottom: var(--spacing-xs);
 }
 
@@ -692,28 +697,30 @@ h4,
 }
 
 /* Performance Indicators */
+/* Performance Indicators - TEGNA Solid Style */
 .cell-excellent {
-    background-color: var(--color-perf-excellent-bg);
-    color: var(--color-perf-excellent);
-    font-weight: 600;
+    background-color: var(--color-perf-excellent);
+    color: #ffffff;
+    font-weight: 700;
 }
 
 .cell-good {
-    background-color: var(--color-perf-good-bg);
-    color: var(--color-perf-good);
-    font-weight: 600;
+    background-color: var(--color-perf-good);
+    color: #ffffff;
+    font-weight: 700;
 }
 
 .cell-moderate {
-    background-color: var(--color-perf-moderate-bg);
-    color: var(--color-perf-moderate);
-    font-weight: 600;
+    background-color: var(--color-perf-moderate);
+    color: #000000;
+    /* Orange needs black text for readability/contrast */
+    font-weight: 700;
 }
 
 .cell-poor {
-    background-color: var(--color-perf-poor-bg);
-    color: var(--color-perf-poor);
-    font-weight: 600;
+    background-color: var(--color-perf-poor);
+    color: #ffffff;
+    font-weight: 700;
 }
 
 
