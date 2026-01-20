@@ -292,13 +292,15 @@ export function getHeatmapConfig(
             ...baseLayout.xaxis,
             side: 'top' as const,
             tickangle: -45,
+            automargin: true,
         },
         yaxis: {
             ...baseLayout.yaxis,
             autorange: 'reversed' as const,
             tickfont: { size: 11 },
         },
-        margin: { t: 100, r: 80, b: 20, l: 120 },
+        // Increase top margin for rotated labels
+        margin: { t: 160, r: 80, b: 20, l: 120 },
     };
 
     return { trace, layout };
