@@ -28,7 +28,8 @@ export class ErrorUI {
             // Insert after results section title
             const resultsSection = document.getElementById('results-section');
             if (resultsSection) {
-                resultsSection.insertBefore(container, resultsSection.firstChild);
+                // Insert at the bottom (append)
+                resultsSection.appendChild(container);
             }
         }
         return container as HTMLElement;

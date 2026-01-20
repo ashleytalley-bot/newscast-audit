@@ -87,21 +87,7 @@
 
         <!-- Results Section (hidden until file processed) -->
         <section id="results-section" class="results-section hidden animate">
-            <!-- Summary Section -->
-            <div id="summary-section" class="summary-grid">
-                <div class="metric-card">
-                    <span id="summary-rows" class="metric-value">-</span>
-                    <span class="metric-label">Audits</span>
-                </div>
-                <div class="metric-card">
-                    <span id="summary-metrics" class="metric-value">-</span>
-                    <span class="metric-label">Data Points</span>
-                </div>
-                <div class="metric-card">
-                    <span id="summary-missing" class="metric-value">-</span>
-                    <span class="metric-label">Missed</span>
-                </div>
-            </div>
+
 
             <!-- Export Buttons -->
             <div class="export-bar" style="padding: 10px 20px;">
@@ -219,6 +205,22 @@
                 <div class="table-card">
                     <h3>Data Quality</h3>
                     <div id="table-quality" class="table-container"></div>
+                </div>
+            </div>
+
+            <!-- Summary Section (Moved to Bottom) -->
+            <div id="summary-section" class="summary-grid mt-4">
+                <div class="metric-card">
+                    <span id="summary-rows" class="metric-value">-</span>
+                    <span class="metric-label">Audits</span>
+                </div>
+                <div class="metric-card">
+                    <span id="summary-metrics" class="metric-value">-</span>
+                    <span class="metric-label">Data Points</span>
+                </div>
+                <div class="metric-card">
+                    <span id="summary-missing" class="metric-value">-</span>
+                    <span class="metric-label">Missed</span>
                 </div>
             </div>
         </section>
