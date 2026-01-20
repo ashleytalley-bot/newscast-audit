@@ -100,7 +100,15 @@ export function getOverallBarConfig(labels: string[], values: number[], n: numbe
         textfont: {
             family: FONTS.mono,
             size: 13,
-            color: '#ffffff',
+            color: values.map(v => {
+                // Excellent (Green) -> White
+                // Good (Blue) -> Black (for better contrast)
+                // Moderate (Yellow) -> Black
+                // Poor (Red) -> White
+                if (v >= 90) return '#ffffff';
+                if (v >= 50) return '#000000';
+                return '#ffffff';
+            }),
         },
         hovertemplate: '<b>%{x}</b><br>%{y:.1f}%<extra></extra>',
         customdata: Array(labels.length).fill(n),
@@ -321,7 +329,11 @@ export function getPerNewscastBarConfig(
         textfont: {
             family: FONTS.mono,
             size: 11,
-            color: '#ffffff',
+            color: values.map(v => {
+                if (v >= 90) return '#ffffff';
+                if (v >= 50) return '#000000';
+                return '#ffffff';
+            }),
         },
         hovertemplate: '<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
     };
