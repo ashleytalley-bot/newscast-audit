@@ -40,7 +40,7 @@ export class PyodideService {
                 return;
             }
 
-            console.log('[PyodideService] Initializing Worker...');
+
             // Path is relative to the directory containing the HTML file
             this.worker = new Worker('js/workers/PyodideWorker.js');
 

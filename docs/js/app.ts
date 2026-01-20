@@ -42,7 +42,6 @@ export class NewscastAuditApp {
     private exporter: DataExporter;
 
     constructor() {
-        console.log("NewscastAuditApp constructor called");
         this.pyodideService = new PyodideService();
 
         // DOM Elements
@@ -385,10 +384,15 @@ export class NewscastAuditApp {
     public showResults() {
         this.dom.uploadSection.classList.add('hidden');
         this.dom.resultsSection.classList.remove('hidden');
+        // Trigger animations
+        requestAnimationFrame(() => {
+            this.dom.resultsSection.classList.add('is-visible');
+        });
     }
 
     public resetToUpload() {
         this.dom.resultsSection.classList.add('hidden');
+        this.dom.resultsSection.classList.remove('is-visible');
         this.dom.uploadSection.classList.remove('hidden');
         this.dom.fileInput.value = '';
         this.hideError();

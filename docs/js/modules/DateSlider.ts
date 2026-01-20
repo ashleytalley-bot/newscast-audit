@@ -77,7 +77,6 @@ export class DateSlider {
             // Prefer raw daily date range if available
             minDate = parseDateUTC(result.charts.date_range.min);
             maxDate = parseDateUTC(result.charts.date_range.max);
-            console.log("Using raw daily date range:", result.charts.date_range);
         } else if (result.charts?.weekly?.full_dates && result.charts.weekly.full_dates.length > 0) {
             // Fall back to weekly chart dates
             const dateRange = getDateRange(result.charts.weekly.full_dates);
@@ -98,11 +97,7 @@ export class DateSlider {
             totalDays: toDayIndex(maxDate, minDate)
         };
 
-        console.log("Slider Setup (UTC):", {
-            minDateStr: toDateString(this.dateRange.min),
-            maxDateStr: toDateString(this.dateRange.max),
-            totalDays: this.dateRange.totalDays
-        });
+
 
         this.createSlider();
     }
@@ -203,7 +198,7 @@ export class DateSlider {
                 const startDateStr = toDateString(startDate)!;
                 const endDateStr = toDateString(endDate)!;
 
-                console.log("Slider released. Triggering onChange callback...");
+
 
                 // Fire onChange callback
                 if (this.options.onChange) {

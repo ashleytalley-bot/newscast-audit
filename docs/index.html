@@ -269,7 +269,6 @@
                 // Dynamically import the app module
                 const module = await import(appModulePath);
                 const { NewscastAuditApp } = module;
-                const { errorUI } = await import('./js/modules/ErrorUI.js');
 
                 // Initialize App
                 const app = new NewscastAuditApp();
