@@ -1,6 +1,7 @@
+// docs/js/workers/PyodideWorker.ts
 importScripts("https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js");
-let pyodide = null;
-let baseUrl = "";
+var pyodide = null;
+var baseUrl = "";
 self.onmessage = async (e) => {
   const { type, id, payload } = e.data;
   console.log(`[PyodideWorker] Received message: ${type}`);

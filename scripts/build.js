@@ -28,10 +28,7 @@ const typeFiles = findTsFiles('docs/js/types'); // Types usually don't need comp
 
 const entryPoints = [
     'docs/js/app.ts',
-    'docs/js/workers/PyodideWorker.ts',
-    ...serviceFiles,
-    ...moduleFiles,
-    ...typeFiles
+    'docs/js/workers/PyodideWorker.ts'
 ];
 
 console.log('Compiling TypeScript files:', entryPoints);
@@ -65,7 +62,7 @@ async function build() {
             outdir: '.',
             outbase: '.',
             allowOverwrite: true,
-            bundle: false,
+            bundle: true,
             format: 'esm',
             platform: 'browser',
             target: ['es2020'],
