@@ -191,6 +191,10 @@ class TablesCollection(BaseModel):
         default=None,
         description="Audit volume by newscast"
     )
+    users: Optional[List[Dict[str, Any]]] = Field(
+        default=None,
+        description="User accountability metrics (Name, Audits, Completeness)"
+    )
 
 
 class QualityWarning(BaseModel):

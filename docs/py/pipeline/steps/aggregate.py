@@ -124,7 +124,80 @@ class AggregationStep(PipelineStep):
                     examples=[str(e)]
                 )
 
-        # Extract comments
+        # Build user accountability table
+        users_df = None
+        if 'name' in df.columns:
+            try:
+                # Group by Name
+                # Fill missing names
+                df['name'] = df['name'].fillna('Unknown User').astype(str)
+                
+                # Calculate metrics per user
+                # 1. Audit Count
+                user_counts = df.groupby('name').size().rename('Audits')
+                
+                # 2. Completeness (Percentage of non-empty fields)
+                # Count non-null values in metric columns relative to total columns
+                numeric_cols = [c for c in metric_columns if c in df.columns]
+                
+                most_missed_series = None
+                
+                if numeric_cols:
+                    # Metric A: Completeness %
+                    row_filled_counts = df[numeric_cols].notna().sum(axis=1)
+                    total_fields = len(numeric_cols)
+                    
+                    if total_fields > 0:
+                        row_completeness = (row_filled_counts / total_fields) * 100
+                        user_scores = row_completeness.groupby(df['name']).mean()
+                    else:
+                        user_scores = pd.Series(0.0, index=user_counts.index)
+                    
+                    user_scores = user_scores.rename('Completeness')
+
+                    # Metric B: Most Often Missed Field
+                    # Identify missing values (True/False)
+                    missing_mask = df[numeric_cols].isna()
+                    # Group by user and sum misses per column
+                    user_miss_counts = missing_mask.groupby(df['name']).sum()
+                    
+                    # Find column with max misses
+                    # If max is 0, then "None"
+                    max_misses = user_miss_counts.max(axis=1)
+                    most_missed_col = user_miss_counts.idxmax(axis=1)
+                    
+                    # Create series
+                    most_missed_series = most_missed_col.where(max_misses > 0, "None")
+                    
+                    # Convert internal names to human labels?
+                    # We need access to config or map. For now, use internal name.
+                    # Or better: clean it up (replace underscores with spaces, title case)
+                    most_missed_series = most_missed_series.map(
+                        lambda x: x.replace('_', ' ').title() if x != "None" else "None"
+                    ).rename("Most Missed Metric")
+
+                else:
+                    user_scores = pd.Series(0.0, index=user_counts.index, name='Completeness')
+                    most_missed_series = pd.Series("None", index=user_counts.index, name="Most Missed Metric")
+                
+                # Combine
+                users_stats = pd.concat([user_counts, user_scores, most_missed_series], axis=1).reset_index()
+                
+                # Sort by Audits (desc), then Completeness (desc)
+                users_df = users_stats.sort_values(['Audits', 'Completeness'], ascending=[False, False])
+                
+                # Rename Name column for display
+                users_df = users_df.rename(columns={'name': 'User'})
+                
+                # Format Score to 1 decimal
+                users_df['Completeness'] = users_df['Completeness'].map('{:.1f}%'.format)
+
+            except Exception as e:
+                quality_tracker.add_warning(
+                    "Failed to calculate user metrics",
+                    count=1,
+                    examples=[str(e)]
+                )
         comments = []
         if 'additional_comments' in df.columns:
             # Filter for non-empty comments
@@ -161,7 +234,8 @@ class AggregationStep(PipelineStep):
             'data_quality': data_quality_df,
             'recent': recent_df,
             'recent_week_start': recent_week_start,
-            'volume': volume_df
+            'volume': volume_df,
+            'users': users_df
         })
         context.set('comments', comments)
 

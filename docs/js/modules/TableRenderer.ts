@@ -41,7 +41,7 @@ export class TableRenderer {
      * Uses the "Editorial Data Studio" performance scale
      */
     private getCellClass(columnName: string, value: any): string {
-        if (columnName === 'Yes %' || columnName === 'Complete %') {
+        if (columnName === 'Yes %' || columnName === 'Complete %' || columnName === 'Completeness') {
             if (typeof value !== 'number') return '';
 
             if (value >= 90) return 'cell-excellent';
@@ -56,7 +56,7 @@ export class TableRenderer {
      * Format cell value for display
      */
     private formatCellValue(columnName: string, value: any): string {
-        if (columnName === 'Yes %' || columnName === 'Complete %') {
+        if (columnName === 'Yes %' || columnName === 'Complete %' || columnName === 'Completeness') {
             return typeof value === 'number' ? value.toFixed(1) + '%' : value;
         }
         return String(value);

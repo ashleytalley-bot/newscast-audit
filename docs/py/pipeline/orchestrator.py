@@ -187,7 +187,10 @@ class ProcessingPipeline:
         data_quality_df = tables.get('data_quality')
         recent_df = tables.get('recent')
         recent_week_start = tables.get('recent_week_start')
+        recent_df = tables.get('recent')
+        recent_week_start = tables.get('recent_week_start')
         volume_df = tables.get('volume')
+        users_df = tables.get('users')
 
         # Build result structure (matches original processing.py output)
         result = {
@@ -203,7 +206,8 @@ class ProcessingPipeline:
                 "data_quality": data_quality_df.to_dict(orient='records') if data_quality_df is not None else [],
                 "recent": recent_df.to_dict(orient='records') if recent_df is not None else None,
                 "recent_week_start": recent_week_start,
-                "volume": volume_df.to_dict(orient='records') if volume_df is not None else None
+                "volume": volume_df.to_dict(orient='records') if volume_df is not None else None,
+                "users": users_df.to_dict(orient='records') if users_df is not None else None
             },
             "charts": charts,
             "export_data": export_data,

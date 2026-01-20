@@ -107,6 +107,8 @@ export interface TablesCollection {
     recent_week_start: string | null;
     /** Audit volume by newscast */
     volume: Record<string, unknown>[] | null;
+    /** User accountability leaderboard */
+    users: Record<string, unknown>[] | null;
 }
 
 /**

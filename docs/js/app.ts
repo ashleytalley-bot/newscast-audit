@@ -439,6 +439,11 @@ export class NewscastAuditApp {
         if (tables.volume) {
             this.tableRenderer.render('table-volume', tables.volume, ['Newscast', 'Responses'], this.processedData.config);
         }
+
+        // User Accountability
+        if (tables.users) {
+            this.tableRenderer.render('table-users', tables.users, ['User', 'Audits', 'Completeness', 'Most Missed Metric'], this.processedData.config);
+        }
     }
 
     private renderCharts() {
