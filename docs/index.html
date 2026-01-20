@@ -284,18 +284,32 @@
                 const errorDiv = document.getElementById('error-message');
                 if (errorDiv) {
                     errorDiv.classList.remove('hidden');
-                    // Fetch check to see if it's network or eval
-                    let additionalInfo = "";
-                    try {
-                        // @ts-ignore
-                        const path = window.lastAttemptedPath || "unknown";
-                        additionalInfo += `<br>Attempted Path: ${path}`;
-                    } catch (ex) { }
 
-                    errorDiv.innerHTML = `<strong>Failed to load application updates.</strong><br>
-                    Technical Details: ${e.message}
-                    ${additionalInfo}
-                    <br><small>${e.stack || ''}</small>`;
+                    // Diagnostic check: fetch the file to see if it's a network issue
+                    (async () => {
+                        let diagnosticInfo = "";
+                        try {
+                            // @ts-ignore
+                            const path = window.lastAttemptedPath || "unknown";
+                            if (path !== "unknown") {
+                                const resp = await fetch(path);
+                                diagnosticInfo = `
+                                    <br><strong>Network Check:</strong>
+                                    <br>Status: ${resp.status} ${resp.statusText}
+                                    <br>Type: ${resp.headers.get('Content-Type')}
+                                    <br>Size: ${resp.headers.get('Content-Length')}
+                                `;
+                            }
+                        } catch (netErr) {
+                            diagnosticInfo = `<br><strong>Network Check Failed:</strong> ${netErr.message}`;
+                        }
+
+                        errorDiv.innerHTML = `<strong>Failed to load application updates.</strong><br>
+                        Technical Details: ${e.message}
+                        <br>Path: ${window.lastAttemptedPath || 'unknown'}
+                        ${diagnosticInfo}
+                        <br><small>${e.stack || ''}</small>`;
+                    })();
                 }
             }
         })();
