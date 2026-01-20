@@ -91,21 +91,65 @@ class ChartRenderer {
   /**
    * Capture chart as image (for PowerPoint export)
    */
-  async captureChartAsImage(elementId, width = 800, height = 500) {
+  /**
+   * Capture chart as image (for PowerPoint export)
+   * Forces Light Mode if forceLightMode is true
+   */
+  async captureChartAsImage(elementId, width = 800, height = 500, forceLightMode = true) {
     const element = document.getElementById(elementId);
-    if (!element) {
-      console.warn(`Chart element ${elementId} not found`);
+    if (!element || !element.layout) {
+      console.warn(`Chart element ${elementId} not found or initialized`);
       return null;
     }
     try {
-      return await Plotly.toImage(element, {
-        format: "png",
-        width,
-        height
-      });
+      let resultData;
+      if (forceLightMode) {
+        const originalLayout = element.layout;
+        const printLayout = JSON.parse(JSON.stringify(originalLayout));
+        printLayout.paper_bgcolor = "#ffffff";
+        printLayout.plot_bgcolor = "#ffffff";
+        if (printLayout.font)
+          printLayout.font.color = "#0f172a";
+        if (printLayout.xaxis) {
+          printLayout.xaxis.gridcolor = "#e5e7eb";
+          printLayout.xaxis.linecolor = "#d1d5db";
+          if (printLayout.xaxis.tickfont)
+            printLayout.xaxis.tickfont.color = "#475569";
+        }
+        if (printLayout.yaxis) {
+          printLayout.yaxis.gridcolor = "#e5e7eb";
+          printLayout.yaxis.linecolor = "#d1d5db";
+          if (printLayout.yaxis.tickfont)
+            printLayout.yaxis.tickfont.color = "#475569";
+        }
+        if (printLayout.legend && printLayout.legend.font) {
+          printLayout.legend.font.color = "#475569";
+        }
+        if (printLayout.title && printLayout.title.font) {
+          printLayout.title.font.color = "#0f172a";
+        }
+        await Plotly.relayout(element, printLayout);
+        resultData = await Plotly.toImage(element, { format: "png", width, height });
+        const restoreLayout = {};
+        restoreLayout.paper_bgcolor = originalLayout.paper_bgcolor;
+        restoreLayout.plot_bgcolor = originalLayout.plot_bgcolor;
+        restoreLayout.font = originalLayout.font;
+        if (originalLayout.xaxis)
+          restoreLayout.xaxis = originalLayout.xaxis;
+        if (originalLayout.yaxis)
+          restoreLayout.yaxis = originalLayout.yaxis;
+        await Plotly.relayout(element, restoreLayout);
+      } else {
+        resultData = await Plotly.toImage(element, { format: "png", width, height });
+      }
+      return resultData;
     } catch (error) {
       console.error(`Error capturing chart ${elementId}:`, error);
-      return null;
+      try {
+        return await Plotly.toImage(element, { format: "png", width, height });
+      } catch (e) {
+        return null;
+      }
     }
   }
 }

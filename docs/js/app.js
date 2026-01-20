@@ -223,9 +223,9 @@ class NewscastAuditApp {
     }
     this.showLoading(LOADING_MESSAGES.rendering);
     this.processedData = successResult;
+    this.showResults();
     this.renderResults();
     this.hideLoading();
-    this.showResults();
     this.initializeDateFilters(successResult);
   }
   handleProcessingError(error) {
