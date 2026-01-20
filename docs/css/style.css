@@ -9,18 +9,18 @@
      BRAND COLORS
      ========================================================================== */
     /* Brand Colors - TEGNA */
-    --color-primary: #FF5F00;
+    --color-primary: #F37022;
     /* TEGNA Orange */
-    --color-primary-hover: #CC4C00;
-    --color-primary-light: #FFF0E5;
+    --color-primary-hover: #D95E16;
+    --color-primary-light: rgba(243, 112, 34, 0.1);
 
-    --color-secondary: #010a48;
-    /* TEGNA Deep Navy (Extracted) */
-    --color-header: #010a48;
+    --color-secondary: #101A61;
+    /* TEGNA Deep Navy */
+    --color-header: #101A61;
     /* TEGNA Header */
 
-    --color-accent: #010a48;
-    --color-accent-hover: #000947;
+    --color-accent: #101A61;
+    --color-accent-hover: #000000;
     /* Retained from original, as user's line was malformed */
     --color-alert: #dc2626;
     --color-alert-light: #fee2e2;
@@ -469,10 +469,14 @@ h4,
 }
 
 .logo {
-    font-size: 1.75rem;
-    font-weight: 700;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
     letter-spacing: 0.05em;
-    color: var(--color-white);
+    color: #ffffff;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1;
 }
 
 .header-title {

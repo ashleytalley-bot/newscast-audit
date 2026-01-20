@@ -5,12 +5,12 @@
 
 export const COLORS = {
     // Brand - TEGNA Theme
-    primary: '#FF5F00',     // TEGNA Primary Orange (Action)
-    primaryHover: '#CC4C00',
+    primary: '#F37022',     // TEGNA Primary Orange (Action)
+    primaryHover: '#D95E16',
     primaryLight: '#FFF0E5',
-    secondary: '#010a48',   // TEGNA Deep Navy (Extracted)
-    header: '#010a48',      // TEGNA Deep Navy (Header)
-    accent: '#010a48',      // Deep Blue as accent
+    secondary: '#101A61',   // TEGNA Deep Navy
+    header: '#101A61',      // TEGNA Deep Navy (Header)
+    accent: '#101A61',      // Deep Blue as accent
     accentHover: '#000000',
     alert: '#dc2626',
     alertLight: '#fee2e2',
