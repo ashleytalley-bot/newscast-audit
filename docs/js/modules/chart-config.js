@@ -1,5 +1,4 @@
 import { COLORS, FONTS, getPerformanceColor } from "./theme.js";
-const isDarkMode = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
 const PLOTLY_CONFIG = {
   responsive: true,
   displaylogo: false,
@@ -19,45 +18,45 @@ const PLOTLY_CONFIG = {
   }
 };
 function getBaseLayout() {
-  const dark = isDarkMode();
+  const dark = false;
   return {
     font: {
       family: FONTS.body,
       size: 13,
-      color: dark ? "#f1f5f9" : COLORS.ui.text
+      color: COLORS.ui.text
     },
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
     margin: { t: 40, r: 24, b: 60, l: 60 },
     hoverlabel: {
-      bgcolor: dark ? "#1e293b" : "#ffffff",
-      bordercolor: dark ? "#334155" : COLORS.ui.border,
+      bgcolor: "#ffffff",
+      bordercolor: COLORS.ui.border,
       font: {
         family: FONTS.body,
         size: 12,
-        color: dark ? "#f1f5f9" : COLORS.ui.text
+        color: COLORS.ui.text
       }
     },
     xaxis: {
-      gridcolor: dark ? "#334155" : "#e5e7eb",
+      gridcolor: "#e5e7eb",
       gridwidth: 1,
-      zerolinecolor: dark ? "#475569" : "#d1d5db",
-      linecolor: dark ? "#475569" : "#d1d5db",
+      zerolinecolor: "#d1d5db",
+      linecolor: "#d1d5db",
       tickfont: {
         size: 11,
         family: FONTS.body,
-        color: dark ? "#94a3b8" : COLORS.ui.textSecondary
+        color: COLORS.ui.textSecondary
       }
     },
     yaxis: {
-      gridcolor: dark ? "#334155" : "#e5e7eb",
+      gridcolor: "#e5e7eb",
       gridwidth: 1,
-      zerolinecolor: dark ? "#475569" : "#d1d5db",
-      linecolor: dark ? "#475569" : "#d1d5db",
+      zerolinecolor: "#d1d5db",
+      linecolor: "#d1d5db",
       tickfont: {
         size: 11,
         family: FONTS.body,
-        color: dark ? "#94a3b8" : COLORS.ui.textSecondary
+        color: COLORS.ui.textSecondary
       }
     }
   };

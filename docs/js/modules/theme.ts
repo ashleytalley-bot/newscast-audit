@@ -90,8 +90,8 @@ export function getPerformanceBgColor(value: number): string {
 }
 
 /**
- * Check if user prefers dark mode
+ * Check if user prefers dark mode - ALWAYS FALSE for Single Theme
  */
 export function prefersDarkMode(): boolean {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return false; // Enforce Light Mode
 }

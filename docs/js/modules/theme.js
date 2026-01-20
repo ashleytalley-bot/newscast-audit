@@ -97,7 +97,7 @@ function getPerformanceBgColor(value) {
   return COLORS.performance.poorBg;
 }
 function prefersDarkMode() {
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+  return false;
 }
 export {
   COLORS,
