@@ -292,5 +292,4 @@ export class ErrorUI {
     }
 }
 
-// Global instance for legacy support if needed, but preferred to import
-export const errorUI = new ErrorUI();
+

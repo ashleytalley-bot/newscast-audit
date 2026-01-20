@@ -5,7 +5,7 @@ import { DataExporter } from './modules/DataExporter.js';
 import { CommentRenderer } from './modules/CommentRenderer.js';
 import { DateSlider } from './modules/DateSlider.js';
 import { PyodideService } from './services/PyodideService.js';
-import { errorUI } from './modules/ErrorUI.js';
+import { ErrorUI } from './modules/ErrorUI.js';
 import { isProcessingResult, ProcessingOutput } from './types/index.js';
 import type { ProcessingResult } from './types/output';
 import type { ErrorResponse } from './types/errors';
@@ -40,6 +40,7 @@ export class NewscastAuditApp {
     private tableRenderer: TableRenderer;
     private commentRenderer: CommentRenderer;
     private exporter: DataExporter;
+    private errorUI: ErrorUI;
 
     constructor() {
         this.pyodideService = new PyodideService();
@@ -61,6 +62,7 @@ export class NewscastAuditApp {
         this.tableRenderer = new TableRenderer();
         this.commentRenderer = new CommentRenderer();
         this.exporter = new DataExporter();
+        this.errorUI = new ErrorUI();
     }
 
     private validateDom() {
@@ -134,11 +136,11 @@ export class NewscastAuditApp {
                 this.processedData = result as ProcessingResult;
                 this.renderResults();
             } else {
-                errorUI.showError(result);
+                this.errorUI.showError(result);
             }
         } catch (e) {
             console.error(e);
-            errorUI.showError("Failed to apply filter");
+            this.errorUI.showError("Failed to apply filter");
         } finally {
             this.hideLoading();
         }
@@ -239,7 +241,7 @@ export class NewscastAuditApp {
 
             // 1. Validate File
             if (!this.isValidExcelFile(file)) {
-                errorUI.showError('Please upload an Excel file (.xlsx or .xls)');
+                this.errorUI.showError('Please upload an Excel file (.xlsx or .xls)');
                 this.hideLoading();
                 return;
             }
@@ -249,7 +251,7 @@ export class NewscastAuditApp {
             const jsonData = await this.parseExcelFile(file);
 
             if (!this.isValidData(jsonData)) {
-                errorUI.showError('Excel file appears to be empty');
+                this.errorUI.showError('Excel file appears to be empty');
                 this.hideLoading();
                 return;
             }
@@ -290,7 +292,7 @@ export class NewscastAuditApp {
 
     private async handleProcessingResult(result: ProcessingResult | ErrorResponse | ProcessingOutput) {
         if (!result.success) {
-            errorUI.showError(result);
+            this.errorUI.showError(result);
             this.hideLoading();
             return;
         }
@@ -302,7 +304,7 @@ export class NewscastAuditApp {
             (successResult.quality.warnings && successResult.quality.warnings.length > 0) ||
             (successResult.quality.info && successResult.quality.info.length > 0)
         )) {
-            errorUI.showWarnings(successResult.quality);
+            this.errorUI.showWarnings(successResult.quality);
         }
 
         // Render UI
@@ -343,7 +345,7 @@ export class NewscastAuditApp {
             }
         }
 
-        errorUI.showError(`Error processing file: ${msg}`);
+        this.errorUI.showError(`Error processing file: ${msg}`);
     }
 
     /**
@@ -378,7 +380,7 @@ export class NewscastAuditApp {
 
     public hideError() {
         this.dom.errorMessage.classList.add('hidden');
-        errorUI.clearAll();
+        this.errorUI.clearAll();
     }
 
     public showResults() {
@@ -396,7 +398,7 @@ export class NewscastAuditApp {
         this.dom.uploadSection.classList.remove('hidden');
         this.dom.fileInput.value = '';
         this.hideError();
-        errorUI.clearAll();
+        this.errorUI.clearAll();
     }
 
     // ═══════════════════════════════════════════════════════════════════════
