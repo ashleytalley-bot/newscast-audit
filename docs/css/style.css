@@ -848,7 +848,7 @@ h4,
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-sm);
     padding: var(--spacing-lg);
-    overflow: hidden;
+    /* overflow: hidden; Removed for E2E visibility */
 }
 
 .chart-card h3 {
@@ -974,7 +974,7 @@ h4,
 
 /* Staggered animation for results sections */
 .results-section.animate>* {
-    animation: fadeInUp 0.5s ease-out backwards;
+    animation: fadeInUp 0.5s ease-out both;
 }
 
 .results-section.animate>*:nth-child(1) {
@@ -1189,4 +1189,15 @@ h4,
         box-shadow: none;
         border: 1px solid var(--color-border);
     }
+}
+
+/* Force Plotly Visibility for E2E Tests */
+.plot-container {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 400px !important;
+    position: relative !important;
 }

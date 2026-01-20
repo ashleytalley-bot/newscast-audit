@@ -85,12 +85,10 @@
             <div id="error-message" class="error-message hidden"></div>
         </section>
 
-        <!-- Results Section (hidden until file processed) -->
-        <section id="results-section" class="results-section hidden animate">
-
-
-            <!-- Export Buttons -->
-            <div class="export-bar" style="padding: 10px 20px;">
+        <!-- Results Section (Hidden by default) -->
+        <div id="results-section" class="results-section hidden animate">
+            <!-- Export Bar -->
+            <div class="flex justify-between items-center mb-6" style="padding: 10px 20px;">
                 <div class="filter-controls d-flex align-items-center">
                     <label class="mb-0 fw-bold text-muted small me-2">Date Range:</label>
                     <div id="date-slider"></div>
@@ -231,7 +229,7 @@
                     <span class="metric-label">Missed</span>
                 </div>
             </div>
-        </section>
+            </section>
     </main>
 
     <footer class="footer">

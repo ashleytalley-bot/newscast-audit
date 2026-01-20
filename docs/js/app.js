@@ -297,9 +297,21 @@ class NewscastAuditApp {
   renderResults() {
     if (!this.processedData)
       return;
-    this.renderSummary();
-    this.renderTables();
-    this.renderCharts();
+    try {
+      this.renderSummary();
+    } catch (e) {
+      console.error("Error rendering summary:", e);
+    }
+    try {
+      this.renderTables();
+    } catch (e) {
+      console.error("Error rendering tables:", e);
+    }
+    try {
+      this.renderCharts();
+    } catch (e) {
+      console.error("Error rendering charts:", e);
+    }
   }
   renderSummary() {
     if (!this.processedData)
