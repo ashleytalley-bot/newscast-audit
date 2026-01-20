@@ -190,7 +190,7 @@ export function getWeeklyTrendConfig(
         line: {
             color: COLORS.primary,
             width: 3,
-            shape: 'spline' as const,
+            shape: 'linear' as const,
         },
         marker: {
             size: 10,

@@ -908,6 +908,105 @@ h4,
     font-size: 0.875rem;
 }
 
+/* ==========================================================================
+   ANIMATIONS
+   ========================================================================== */
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Utilities */
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-slide-up {
+    animation: fadeInUp 0.5s ease-out forwards;
+}
+
+.animate-scale-in {
+    animation: scaleIn 0.3s ease-out forwards;
+}
+
+/* Staggered animation for results sections */
+.results-section.animate>* {
+    animation: fadeInUp 0.5s ease-out backwards;
+}
+
+.results-section.animate>*:nth-child(1) {
+    animation-delay: 0ms;
+}
+
+.results-section.animate>*:nth-child(2) {
+    animation-delay: 100ms;
+}
+
+.results-section.animate>*:nth-child(3) {
+    animation-delay: 200ms;
+}
+
+.results-section.animate>*:nth-child(4) {
+    animation-delay: 300ms;
+}
+
+.results-section.animate>*:nth-child(5) {
+    animation-delay: 400ms;
+}
+
+.results-section.animate>*:nth-child(6) {
+    animation-delay: 500ms;
+}
+
+/* Enhanced Hover States */
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+.upload-box {
+    transition: transform var(--transition-normal), border-color var(--transition-normal), background-color var(--transition-normal);
+}
+
+.upload-box:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     .header-content {

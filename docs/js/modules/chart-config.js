@@ -148,7 +148,7 @@ function getWeeklyTrendConfig(dates, values, fullDates, centerLine, ucl, lcl) {
     line: {
       color: COLORS.primary,
       width: 3,
-      shape: "spline"
+      shape: "linear"
     },
     marker: {
       size: 10,
