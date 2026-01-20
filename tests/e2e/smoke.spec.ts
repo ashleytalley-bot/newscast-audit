@@ -17,7 +17,7 @@ test.describe('Newscast Audit App', () => {
         await page.goto('/');
 
         // 3. Wait for basic render
-        await expect(page.locator('.header-title')).toHaveText('Newscast Audit Report');
+        await expect(page.locator('.header-title')).toHaveText('Newscast Audit Tool');
 
         // 4. Trigger and wait for initialization to finish
         // This ensures we catch any background error during initialization
