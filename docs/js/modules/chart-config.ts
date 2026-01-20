@@ -275,9 +275,9 @@ export function getHeatmapConfig(
         text: hoverText,
         texttemplate: '%{z:.0f}',
         textfont: {
-            size: 11,
+            size: 12,
             family: FONTS.mono,
-            color: '#374151',
+            color: '#000000', // Pure black for maximum contrast on pastel backgrounds
         },
         showscale: true,
     };
