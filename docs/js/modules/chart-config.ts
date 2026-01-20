@@ -94,21 +94,13 @@ export function getOverallBarConfig(labels: string[], values: number[], n: numbe
             color: values.map(v => getPerformanceColor(v)),
             line: { width: 0 },
         },
-        text: values.map(v => `${v.toFixed(0)}%`),
+        text: values.map(v => `<b>${v.toFixed(0)}%</b>`),
         textposition: 'inside' as const,
         textangle: 0,
         textfont: {
-            family: FONTS.mono,
-            size: 13,
-            color: values.map(v => {
-                // Excellent (Green) -> White
-                // Good (Blue) -> White
-                // Moderate (Orange) -> Black
-                // Poor (Red) -> White
-                if (v >= 80) return '#ffffff';
-                if (v >= 50) return '#000000';
-                return '#ffffff';
-            }),
+            family: FONTS.body, // switched to Sans-Serif
+            size: 14,           // larger for main chart
+            color: '#ffffff',   // Always White
         },
         hovertemplate: '<b>%{x}</b><br>%{y:.1f}%<extra></extra>',
         customdata: Array(labels.length).fill(n),
@@ -326,25 +318,12 @@ export function getPerNewscastBarConfig(
             color: values.map(v => getPerformanceColor(v)),
             line: { width: 0 },
         },
-        text: values.map(v => `${v.toFixed(0)}%`),
+        text: values.map(v => `<b>${v.toFixed(0)}%</b>`),
         textposition: 'inside' as const,
         textfont: {
-            family: FONTS.mono,
-            size: 11,
-            color: values.map(v => {
-                // High contrast text colors
-                // TEGNA Blue/Green (Dark) -> White text
-                // TEGNA Orange/Yellow (Light) -> Black text
-                // Thresholds align with theme colors: 
-                // >= 90 (Green/Excellent) -> White
-                // >= 80 (Blue/Good) -> White
-                // >= 50 (Orange/Moderate) -> Black (Orange needs black for contrast)
-                // < 50 (Red/Poor) -> White
-
-                if (v >= 80) return '#ffffff'; // Green/Blue -> White
-                if (v >= 50) return '#000000'; // Orange -> Black
-                return '#ffffff';              // Red -> White
-            }),
+            family: FONTS.body, // switched to Sans-Serif for TEGNA look
+            size: 13,           // increased size slightly
+            color: '#ffffff',   // Always White as requested
         },
         hovertemplate: '<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
     };

@@ -72,19 +72,16 @@ function getOverallBarConfig(labels, values, n) {
       color: values.map((v) => getPerformanceColor(v)),
       line: { width: 0 }
     },
-    text: values.map((v) => `${v.toFixed(0)}%`),
+    text: values.map((v) => `<b>${v.toFixed(0)}%</b>`),
     textposition: "inside",
     textangle: 0,
     textfont: {
-      family: FONTS.mono,
-      size: 13,
-      color: values.map((v) => {
-        if (v >= 80)
-          return "#ffffff";
-        if (v >= 50)
-          return "#000000";
-        return "#ffffff";
-      })
+      family: FONTS.body,
+      // switched to Sans-Serif
+      size: 14,
+      // larger for main chart
+      color: "#ffffff"
+      // Always White
     },
     hovertemplate: "<b>%{x}</b><br>%{y:.1f}%<extra></extra>",
     customdata: Array(labels.length).fill(n)
@@ -262,18 +259,15 @@ function getPerNewscastBarConfig(newscast, labels, values, n) {
       color: values.map((v) => getPerformanceColor(v)),
       line: { width: 0 }
     },
-    text: values.map((v) => `${v.toFixed(0)}%`),
+    text: values.map((v) => `<b>${v.toFixed(0)}%</b>`),
     textposition: "inside",
     textfont: {
-      family: FONTS.mono,
-      size: 11,
-      color: values.map((v) => {
-        if (v >= 80)
-          return "#ffffff";
-        if (v >= 50)
-          return "#000000";
-        return "#ffffff";
-      })
+      family: FONTS.body,
+      // switched to Sans-Serif for TEGNA look
+      size: 13,
+      // increased size slightly
+      color: "#ffffff"
+      // Always White as requested
     },
     hovertemplate: "<b>%{y}</b><br>%{x:.1f}%<extra></extra>"
   };
