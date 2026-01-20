@@ -1,4 +1,4 @@
-import { COLORS, FONTS, getPerformanceColor } from "./theme";
+import { COLORS, FONTS, getPerformanceColor } from "./theme.js";
 const isDarkMode = () => window.matchMedia("(prefers-color-scheme: dark)").matches;
 const PLOTLY_CONFIG = {
   responsive: true,

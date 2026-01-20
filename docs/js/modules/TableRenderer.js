@@ -7,11 +7,10 @@ class TableRenderer {
     if (!container)
       return;
     if (!data || data.length === 0) {
-      container.innerHTML = "<p>No data available</p>";
+      container.innerHTML = '<p class="text-muted text-center p-3">No data available</p>';
       return;
     }
-    const thresholds = config.thresholds;
-    let html = "<table><thead><tr>";
+    let html = '<table class="data-table"><thead><tr>';
     columns.forEach((col) => {
       html += `<th>${col}</th>`;
     });
@@ -20,7 +19,7 @@ class TableRenderer {
       html += "<tr>";
       columns.forEach((col) => {
         const value = row[col];
-        const className = this.getCellClass(col, value, thresholds);
+        const className = this.getCellClass(col, value);
         const displayValue = this.formatCellValue(col, value);
         html += `<td class="${className}">${displayValue}</td>`;
       });
@@ -30,15 +29,20 @@ class TableRenderer {
     container.innerHTML = html;
   }
   /**
-   * Get CSS class for cell based on value and thresholds
+   * Get CSS class for cell based on value
+   * Uses the "Editorial Data Studio" performance scale
    */
-  getCellClass(columnName, value, thresholds) {
+  getCellClass(columnName, value) {
     if (columnName === "Yes %" || columnName === "Complete %") {
-      if (value >= thresholds.good)
-        return "pct-good";
-      if (value <= thresholds.poor)
-        return "pct-poor";
-      return "pct-moderate";
+      if (typeof value !== "number")
+        return "";
+      if (value >= 90)
+        return "cell-excellent";
+      if (value >= 80)
+        return "cell-good";
+      if (value >= 50)
+        return "cell-moderate";
+      return "cell-poor";
     }
     return "";
   }
@@ -47,7 +51,7 @@ class TableRenderer {
    */
   formatCellValue(columnName, value) {
     if (columnName === "Yes %" || columnName === "Complete %") {
-      return value + "%";
+      return typeof value === "number" ? value.toFixed(1) + "%" : value;
     }
     return String(value);
   }

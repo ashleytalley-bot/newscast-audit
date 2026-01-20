@@ -4,7 +4,7 @@
  * Implements "Editorial Data Studio" aesthetic
  */
 
-import { COLORS, FONTS, getPerformanceColor } from './theme';
+import { COLORS, FONTS, getPerformanceColor } from './theme.js';
 
 // Detect dark mode for dynamic theming
 const isDarkMode = () => window.matchMedia('(prefers-color-scheme: dark)').matches;
