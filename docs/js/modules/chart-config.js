@@ -289,8 +289,8 @@ function getPerNewscastBarConfig(newscast, labels, values, n) {
       ...baseLayout.yaxis,
       automargin: true
     },
-    // Increased left margin to 200 to accommodate long labels
-    margin: { t: 40, r: 20, b: 40, l: 200 },
+    // Increased left margin to 250 to accommodate long labels and prevent overlap
+    margin: { t: 40, r: 20, b: 40, l: 250 },
     height: Math.max(200, labels.length * 35 + 80)
   };
   return { trace, layout };

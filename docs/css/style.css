@@ -10,13 +10,17 @@
      ========================================================================== */
     /* Brand Colors - TEGNA */
     --color-primary: #FF5F00;
-    /* Orange */
+    /* TEGNA Orange */
     --color-primary-hover: #CC4C00;
     --color-primary-light: #FFF0E5;
-    --color-secondary: #001489;
-    /* Blue */
-    --color-accent: #001489;
-    --color-accent-hover: #d85d15;
+
+    --color-secondary: #010a48;
+    /* TEGNA Deep Navy (Extracted) */
+    --color-header: #010a48;
+    /* TEGNA Header */
+
+    --color-accent: #010a48;
+    --color-accent-hover: #000947;
     /* Retained from original, as user's line was malformed */
     --color-alert: #dc2626;
     --color-alert-light: #fee2e2;
@@ -434,15 +438,23 @@ h4,
 }
 
 /* Header */
-.header {
-    background: var(--color-header);
-    /* TEGNA Navy #001246 */
-    border-bottom: 1px solid var(--color-border);
-    padding: var(--spacing-md) 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    transition: background-color var(--transition-normal), border-color var(--transition-normal);
+/* Brand Colors (TEGNA Official) */
+--color-primary: #FF5F00;
+/* TEGNA Orange */
+--color-primary-hover: #e65600;
+--color-primary-light: rgba(255, 95, 0, 0.1);
+
+--color-secondary: #010a48;
+/* TEGNA Deep Navy (Extracted from site) */
+--color-header: #010a48;
+/* Matches TEGNA website header */
+border-bottom: 1px solid var(--color-border);
+padding: var(--spacing-md) 0;
+position: sticky;
+top: 0;
+z-index: 100;
+transition: background-color var(--transition-normal),
+border-color var(--transition-normal);
 }
 
 .header-content {
