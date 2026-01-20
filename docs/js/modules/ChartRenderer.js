@@ -1,52 +1,25 @@
-import { CHART_DEFAULTS } from "./config.js";
+import {
+  PLOTLY_CONFIG,
+  getOverallBarConfig,
+  getPerNewscastBarConfig,
+  getWeeklyTrendConfig,
+  getHeatmapConfig
+} from "./chart-config.js";
 class ChartRenderer {
-  /**
-   * Create a Plotly bar trace
-   */
-  createBarTrace(labels, values, colors, isHorizontal = false) {
-    const baseTrace = {
-      type: "bar",
-      marker: { color: colors },
-      text: values.map((v) => v + "%"),
-      textposition: "outside"
-    };
-    if (isHorizontal) {
-      return { ...baseTrace, y: labels, x: values, orientation: "h" };
-    } else {
-      return { ...baseTrace, x: labels, y: values };
-    }
-  }
-  /**
-   * Create Plotly layout configuration
-   */
-  createLayout(title, config, isHorizontal = false) {
-    const margins = isHorizontal ? CHART_DEFAULTS.margins.perNewscast : CHART_DEFAULTS.margins.overall;
-    const axis = isHorizontal ? "xaxis" : "yaxis";
-    const layout = {
-      title,
-      [axis]: {
-        title: "Percent Yes",
-        range: CHART_DEFAULTS.axisRange,
-        ticksuffix: "%"
-      },
-      margin: margins,
-      font: {
-        family: CHART_DEFAULTS.fonts.family,
-        color: config.palette.primary
-      }
-    };
-    if (!isHorizontal) {
-      layout.xaxis = { tickangle: -35 };
-    }
-    return layout;
-  }
   /**
    * Render overall metrics chart
    */
   renderOverallChart(containerId, chartData, config) {
-    const trace = this.createBarTrace(chartData.labels, chartData.values, chartData.colors);
-    const layout = this.createLayout(`Overall Audit Metrics (n=${chartData.n})`, config);
-    Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+    const { trace, layout } = getOverallBarConfig(
+      chartData.labels,
+      chartData.values,
+      chartData.n
+    );
+    layout.title = {
+      text: `Overall Audit Metrics (n=${chartData.n})`,
+      x: 0.05
+    };
+    Plotly.newPlot(containerId, [trace], layout, PLOTLY_CONFIG);
   }
   /**
    * Render per-newscast charts
@@ -64,11 +37,15 @@ class ChartRenderer {
       const chartId = `chart-newscast-${index}`;
       const card = document.createElement("div");
       card.className = "chart-card";
-      card.innerHTML = `<h3>${data.newscast} (n=${data.n})</h3><div id="${chartId}" class="chart-container"></div>`;
+      card.innerHTML = `<div id="${chartId}" class="chart-container"></div>`;
       container.appendChild(card);
-      const trace = this.createBarTrace(data.labels, data.values, data.colors, true);
-      const layout = this.createLayout(null, config, true);
-      Plotly.newPlot(chartId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+      const { trace, layout } = getPerNewscastBarConfig(
+        data.newscast,
+        data.labels,
+        data.values,
+        data.n
+      );
+      Plotly.newPlot(chartId, [trace], layout, PLOTLY_CONFIG);
     });
   }
   /**
@@ -78,103 +55,20 @@ class ChartRenderer {
     const container = document.getElementById(containerId);
     if (!container || !weeklyData)
       return;
-    const commonLineProps = {
-      width: 3,
-      shape: "linear"
-      // Straight lines as requested
-    };
-    const traces = [
-      {
-        x: weeklyData.dates,
-        y: weeklyData.values,
-        type: "scatter",
-        mode: "lines+markers",
-        name: "Performance",
-        line: {
-          color: config.palette.primary,
-          ...commonLineProps
-        },
-        marker: { size: 12 },
-        // Bigger points
-        text: weeklyData.full_dates,
-        hovertemplate: "Week of %{text}: %{y}%<extra></extra>",
-        connectgaps: true
-      }
-    ];
-    if (weeklyData.center_line !== null && weeklyData.center_line !== void 0) {
-      traces.push({
-        x: weeklyData.dates,
-        // Create constant line for center line
-        y: weeklyData.dates.map(() => weeklyData.center_line),
-        type: "scatter",
-        mode: "lines",
-        name: "Average (CL)",
-        line: {
-          color: "#2e7d32",
-          // Green
-          width: 2,
-          dash: "solid"
-        },
-        hoverinfo: "name+y",
-        connectgaps: true
-      });
-    }
-    if (weeklyData.ucl && weeklyData.ucl.length > 0) {
-      traces.push({
-        x: weeklyData.dates,
-        y: weeklyData.ucl,
-        type: "scatter",
-        mode: "lines",
-        name: "UCL",
-        line: {
-          color: "#9e9e9e",
-          // Gray
-          width: 2,
-          dash: "dot",
-          // Dotted
-          shape: "hv"
-          // Stepped line for limits
-        },
-        hoverinfo: "name+y",
-        opacity: 0.7,
-        connectgaps: true
-      });
-    }
-    if (weeklyData.lcl && weeklyData.lcl.length > 0) {
-      traces.push({
-        x: weeklyData.dates,
-        y: weeklyData.lcl,
-        type: "scatter",
-        mode: "lines",
-        name: "LCL",
-        line: {
-          color: "#9e9e9e",
-          // Gray
-          width: 2,
-          dash: "dot",
-          // Dotted
-          shape: "hv"
-        },
-        hoverinfo: "name+y",
-        opacity: 0.7,
-        connectgaps: true
-      });
-    }
-    const layout = {
-      title: "Weekly Performance Trend",
-      yaxis: {
-        title: "Percent Yes",
-        range: CHART_DEFAULTS.axisRange,
-        ticksuffix: "%"
-      },
-      margin: CHART_DEFAULTS.margins.overall,
-      font: {
-        family: CHART_DEFAULTS.fonts.family,
-        color: config.palette.primary
-      }
-    };
-    Plotly.newPlot(containerId, traces, layout, { responsive: CHART_DEFAULTS.responsive });
+    const { traces, layout } = getWeeklyTrendConfig(
+      weeklyData.dates,
+      weeklyData.values,
+      weeklyData.full_dates,
+      weeklyData.center_line,
+      weeklyData.ucl,
+      weeklyData.lcl
+    );
+    layout.title = "Weekly Performance Trend";
+    Plotly.newPlot(containerId, traces, layout, PLOTLY_CONFIG);
   }
+  /**
+   * Render heatmap
+   */
   renderHeatmap(containerId, perNewscastData, config) {
     const container = document.getElementById(containerId);
     if (!container || !perNewscastData || perNewscastData.length === 0)
@@ -182,53 +76,22 @@ class ChartRenderer {
     const allNewscasts = perNewscastData.map((d) => d.newscast).reverse();
     const allMetrics = perNewscastData[0].labels;
     const zValues = [];
-    const customData = [];
+    const hoverText = [];
     for (let i = perNewscastData.length - 1; i >= 0; i--) {
       const rowData = perNewscastData[i];
       zValues.push(rowData.values);
-      customData.push(rowData.values.map(() => rowData.n));
+      const rowHover = rowData.values.map((v, idx) => {
+        return `Newscast: ${rowData.newscast}<br>Metric: ${allMetrics[idx]}<br>Yes: ${v.toFixed(1)}%<br>n: ${rowData.n}`;
+      });
+      hoverText.push(rowHover);
     }
-    const trace = {
-      z: zValues,
-      x: allMetrics,
-      y: allNewscasts,
-      customdata: customData,
-      type: "heatmap",
-      colorscale: [
-        [0, "#d32f2f"],
-        // Red
-        [0.5, "#fbc02d"],
-        // Yellow
-        [1, "#388e3c"]
-        // Green
-      ],
-      zmin: 0,
-      zmax: 100,
-      xgap: 1,
-      ygap: 1,
-      hovertemplate: `Newscast: %{y}<br>Metric: %{x}<br>Yes: %{z}%<br>n: %{customdata}<extra></extra>`
-    };
-    const layout = {
-      // title: 'Performance Heatmap', // Removed to avoid overlap with HTML header
-      xaxis: {
-        tickangle: -30,
-        automargin: true,
-        side: "top"
-      },
-      yaxis: {
-        automargin: true,
-        categoryarray: allNewscasts,
-        categoryorder: "array"
-      },
-      margin: {
-        l: 150,
-        r: 20,
-        b: 50,
-        t: 80
-        // Reduced top margin slightly as title is gone
-      }
-    };
-    Plotly.newPlot(containerId, [trace], layout, { responsive: CHART_DEFAULTS.responsive });
+    const { trace, layout } = getHeatmapConfig(
+      zValues,
+      allMetrics,
+      allNewscasts,
+      hoverText
+    );
+    Plotly.newPlot(containerId, [trace], layout, PLOTLY_CONFIG);
   }
   /**
    * Capture chart as image (for PowerPoint export)
