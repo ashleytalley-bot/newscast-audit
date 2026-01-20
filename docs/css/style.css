@@ -1144,6 +1144,11 @@ h4,
     .chart-container text {
         fill: var(--color-text-secondary) !important;
     }
+
+    /* Brand Logo: Force White in Dark Mode for professional appearance */
+    .logo {
+        color: #ffffff;
+    }
 }
 
 /* Print styles */
