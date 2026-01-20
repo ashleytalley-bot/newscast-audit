@@ -324,12 +324,16 @@ export function getPerNewscastBarConfig(
             line: { width: 0 },
         },
         text: values.map(v => `<b>${v.toFixed(0)}%</b>`),
-        textposition: 'inside' as const,
+        // Smart positioning: Outside if small (<25%), Inside if large
+        textposition: values.map(v => v < 25 ? 'outside' : 'inside'),
+        // Smart coloring: Black (ui text) if outside, White if inside
         textfont: {
-            family: FONTS.body, // switched to Sans-Serif for TEGNA look
-            size: 13,           // increased size slightly
-            color: '#ffffff',   // Always White as requested
+            family: FONTS.body,
+            size: 13,
+            color: values.map(v => v < 25 ? COLORS.ui.text : '#ffffff'),
         },
+        constraintext: 'none', // Allow text to overflow bar if inside
+        cliponaxis: false,     // Allow text to go outside plot area
         hovertemplate: '<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
     };
 
@@ -344,16 +348,19 @@ export function getPerNewscastBarConfig(
         bargap: 0.2,
         xaxis: {
             ...baseLayout.xaxis,
-            range: [0, 105],
+            range: [0, 110], // Increased to accommodate outside labels
             ticksuffix: '%',
             dtick: 25,
+            showgrid: true,
+            zeroline: true,
+            fixedrange: true, // Prevent zooming
         },
         yaxis: {
             ...baseLayout.yaxis,
             automargin: true,
         },
-        // Increased left margin to 250 to accommodate long labels and prevent overlap
-        margin: { t: 40, r: 20, b: 40, l: 250 },
+        // Large left margin for labels, standard right margin
+        margin: { t: 40, r: 60, b: 40, l: 250 },
         height: Math.max(200, labels.length * 35 + 80),
     };
 
