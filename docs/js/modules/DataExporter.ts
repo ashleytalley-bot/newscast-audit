@@ -80,6 +80,22 @@ export class DataExporter {
             slide.addImage({ data: overallChart, x: 0.5, y: 1, w: 9, h: 4.5 });
         }
 
+        // Weekly Trend Chart Slide
+        const weeklyChart = await chartRenderer.captureChartAsImage('chart-weekly');
+        if (weeklyChart) {
+            slide = pptx.addSlide();
+            slide.addText('Weekly Trend Analysis', { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 28, bold: true });
+            slide.addImage({ data: weeklyChart, x: 0.5, y: 1, w: 9, h: 4.5 });
+        }
+
+        // Heatmap Chart Slide
+        const heatmapChart = await chartRenderer.captureChartAsImage('chart-heatmap');
+        if (heatmapChart) {
+            slide = pptx.addSlide();
+            slide.addText('Performance Heatmap', { x: 0.5, y: 0.3, w: 9, h: 0.5, fontSize: 28, bold: true });
+            slide.addImage({ data: heatmapChart, x: 0.5, y: 1, w: 9, h: 4.5 });
+        }
+
         // Per-newscast charts
         const perNewscastCharts = processedData.charts.per_newscast;
         for (let i = 0; i < perNewscastCharts.length; i++) {
