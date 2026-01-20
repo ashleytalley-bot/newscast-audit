@@ -282,7 +282,9 @@
                 const errorDiv = document.getElementById('error-message');
                 if (errorDiv) {
                     errorDiv.classList.remove('hidden');
-                    errorDiv.textContent = "Failed to load application updates. Please reload.";
+                    errorDiv.innerHTML = `<strong>Failed to load application updates.</strong><br>
+                    Technical Details: ${e.message}<br>
+                    <small>${e.stack || ''}</small>`;
                 }
             }
         })();
