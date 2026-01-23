@@ -184,9 +184,10 @@ class ChartGenerationStep(PipelineStep):
             except Exception:
                 return None
 
-        # Resample by week (Sunday-Saturday)
-        # Use 'W' (default, ends on Sunday) to avoid future-dated labels
+        # Resample by week (Sunday-Saturday), label with week start date
+        # This prevents future-dated weeks from appearing in the chart
         weekly = df.set_index('newscast_date').sort_index()
+        max_date = weekly.index.max()
 
         # Calculate weekly average of all metrics
         # First, ensure we only numeric columns
@@ -194,14 +195,18 @@ class ChartGenerationStep(PipelineStep):
         if not metric_cols:
             return None
 
-        weekly_metrics = weekly[metric_cols].resample('W').mean() * 100
-        
+        # Use label='left' to label weeks with their START date (Sunday)
+        weekly_metrics = weekly[metric_cols].resample('W', label='left').mean() * 100
+
         # Calculate overall weekly average (mean of means)
         weekly_overall = weekly_metrics.mean(axis=1)
-        
+
         # Drop weeks with no data (NaN)
         weekly_overall = weekly_overall.dropna()
-        
+
+        # Filter out weeks beyond the max actual data date to prevent future dates
+        weekly_overall = weekly_overall[weekly_overall.index <= max_date]
+
         if weekly_overall.empty:
             return None
 
@@ -220,8 +225,8 @@ class ChartGenerationStep(PipelineStep):
         # Approximation: weekly_metrics is average %, but we need raw counts or N.
         # We can get N by resampling count.
         
-        # Count of non-null metric values per week
-        weekly_counts = weekly[metric_cols].resample('W').count().sum(axis=1)
+        # Count of non-null metric values per week (using same labeling as metrics)
+        weekly_counts = weekly[metric_cols].resample('W', label='left').count().sum(axis=1)
         # Filter to same weeks as overall
         weekly_counts = weekly_counts.loc[weekly_overall.index]
         
