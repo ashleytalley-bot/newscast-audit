@@ -184,17 +184,17 @@ class ChartGenerationStep(PipelineStep):
             except Exception:
                 return None
 
-        # Resample by week (starting Monday)
-        # We use 'W-MON' frequency
+        # Resample by week (Sunday-Saturday)
+        # Use 'W' (default, ends on Sunday) to avoid future-dated labels
         weekly = df.set_index('newscast_date').sort_index()
-        
+
         # Calculate weekly average of all metrics
         # First, ensure we only numeric columns
         metric_cols = [c for c in self.config.METRIC_COLUMNS if c in df.columns]
         if not metric_cols:
             return None
-            
-        weekly_metrics = weekly[metric_cols].resample('W-MON').mean() * 100
+
+        weekly_metrics = weekly[metric_cols].resample('W').mean() * 100
         
         # Calculate overall weekly average (mean of means)
         weekly_overall = weekly_metrics.mean(axis=1)
@@ -221,7 +221,7 @@ class ChartGenerationStep(PipelineStep):
         # We can get N by resampling count.
         
         # Count of non-null metric values per week
-        weekly_counts = weekly[metric_cols].resample('W-MON').count().sum(axis=1)
+        weekly_counts = weekly[metric_cols].resample('W').count().sum(axis=1)
         # Filter to same weeks as overall
         weekly_counts = weekly_counts.loc[weekly_overall.index]
         
