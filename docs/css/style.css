@@ -995,6 +995,8 @@ h4,
     min-height: 400px;
     width: 100%;
     position: relative;
+    max-width: 100%;
+    overflow: hidden;
 }
 
 .section-title {
@@ -1012,6 +1014,7 @@ h4,
 
 .charts-grid .chart-card {
     min-height: 350px;
+    overflow: hidden;
 }
 
 /* Filter Row */

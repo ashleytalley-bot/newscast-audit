@@ -364,10 +364,10 @@ export function getPerNewscastBarConfig(
         },
         yaxis: {
             ...baseLayout.yaxis,
-            automargin: true,
+            automargin: false,
         },
-        // Moderate left margin, automargin will expand if needed
-        margin: { t: 40, r: 60, b: 40, l: 180 },
+        // Constrained left margin - prevents chart from expanding beyond container
+        margin: { t: 40, r: 40, b: 40, l: 120 },
         height: finalHeight,
     };
 
