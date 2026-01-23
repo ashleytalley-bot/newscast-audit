@@ -366,8 +366,8 @@ export function getPerNewscastBarConfig(
             ...baseLayout.yaxis,
             automargin: false,
         },
-        // Constrained left margin - prevents chart from expanding beyond container
-        margin: { t: 40, r: 40, b: 40, l: 120 },
+        // Balance: left margin for labels without excessive expansion
+        margin: { t: 40, r: 60, b: 40, l: 160 },
         height: finalHeight,
     };
 
