@@ -1,6 +1,11 @@
 # Ensure Python files are treated as text and have consistent line endings
 *.py text eol=lf
 
+# Config and manifest files - must be readable by web server
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+
 # Ensure scripts are executable
 *.sh text eol=lf
 
