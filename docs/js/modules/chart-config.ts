@@ -365,6 +365,7 @@ export function getPerNewscastBarConfig(
         yaxis: {
             ...baseLayout.yaxis,
             automargin: false,
+            tickangle: -15,
         },
         // Balance: left margin for labels without excessive expansion
         margin: { t: 40, r: 60, b: 40, l: 160 },
