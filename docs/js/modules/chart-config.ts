@@ -14,7 +14,7 @@ import { COLORS, FONTS, getPerformanceColor } from './theme.js';
  * Standard Plotly config (toolbar, interaction settings)
  */
 export const PLOTLY_CONFIG = {
-    responsive: true,
+    responsive: false,
     displaylogo: false,
     modeBarButtonsToRemove: [
         'select2d',
@@ -345,6 +345,7 @@ export function getPerNewscastBarConfig(
 
     const layout = {
         ...baseLayout,
+        autosize: false,
         title: {
             text: `${newscast} (n=${n})`,
             font: { size: 14, family: FONTS.body },
