@@ -83,6 +83,9 @@ class ChartGenerationStep(PipelineStep):
                     continue
 
                 sub_mean = (sub[metric_columns].mean(skipna=True) * 100)
+                num_metrics = len(sub_mean.index.tolist())
+                print(f"DEBUG: {nc} - {num_metrics} metrics: {sub_mean.index.tolist()}")
+
                 per_newscast_charts.append({
                     "newscast": nc,
                     "labels": question_labels(sub_mean.index.tolist()),
