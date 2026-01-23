@@ -337,6 +337,12 @@ export function getPerNewscastBarConfig(
         hovertemplate: '<b>%{y}</b><br>%{x:.1f}%<extra></extra>',
     };
 
+    // Cap height to prevent excessive scrolling while still accommodating all bars
+    // Each bar takes ~35px, plus margins. Cap at 500px to fit most screens.
+    const calculatedHeight = Math.max(300, labels.length * 35 + 80);
+    const maxHeight = 500;
+    const finalHeight = Math.min(calculatedHeight, maxHeight);
+
     const layout = {
         ...baseLayout,
         title: {
@@ -361,7 +367,7 @@ export function getPerNewscastBarConfig(
         },
         // Large left margin for labels, standard right margin
         margin: { t: 40, r: 60, b: 40, l: 250 },
-        height: Math.max(200, labels.length * 35 + 80),
+        height: finalHeight,
     };
 
     return { trace, layout };
