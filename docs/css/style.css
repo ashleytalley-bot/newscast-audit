@@ -995,7 +995,6 @@ h4,
     min-height: 400px;
     width: 100%;
     position: relative;
-    /* Overflow removed to prevent clipping */
 }
 
 .section-title {

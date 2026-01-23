@@ -365,8 +365,8 @@ export function getPerNewscastBarConfig(
             ...baseLayout.yaxis,
             automargin: true,
         },
-        // Large left margin for labels, standard right margin
-        margin: { t: 40, r: 60, b: 40, l: 250 },
+        // Moderate left margin, automargin will expand if needed
+        margin: { t: 40, r: 60, b: 40, l: 180 },
         height: finalHeight,
     };
 
