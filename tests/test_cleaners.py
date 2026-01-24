@@ -14,9 +14,47 @@ from lib.cleaners import (
     normalize_newscast,
     convert_to_numeric,
     standardize_columns,
-    clean_data
+    clean_data,
+    normalize_quotes
 )
 from lib.exceptions import DataValidationError
+
+
+class TestNormalizeQuotes:
+    """Tests for normalize_quotes() function - handles MS Forms curly quotes."""
+
+    def test_straight_quotes_unchanged(self):
+        """Straight ASCII quotes should pass through unchanged."""
+        text = 'Say "hello" and it\'s fine'
+        assert normalize_quotes(text) == text
+
+    def test_curly_double_quotes_normalized(self):
+        """Curly double quotes should become straight quotes."""
+        # \u201c = left curly double quote, \u201d = right curly double quote
+        text = 'Say \u201chello\u201d'
+        assert normalize_quotes(text) == 'Say "hello"'
+
+    def test_curly_single_quotes_normalized(self):
+        """Curly single quotes/apostrophes should become straight."""
+        # \u2018 = left curly single, \u2019 = right curly single (apostrophe)
+        text = "It\u2019s a \u2018test\u2019"
+        assert normalize_quotes(text) == "It's a 'test'"
+
+    def test_mixed_quotes_normalized(self):
+        """Mix of curly and straight quotes should all become straight."""
+        # This matches the actual MS Forms column header pattern
+        text = 'Does the story address the audience as \u201cyou,\u201d end with "Here\u2019s what you can do today\u201d?'
+        expected = 'Does the story address the audience as "you," end with "Here\'s what you can do today"?'
+        assert normalize_quotes(text) == expected
+
+    def test_empty_string(self):
+        """Empty string should return empty string."""
+        assert normalize_quotes('') == ''
+
+    def test_no_quotes(self):
+        """String with no quotes should pass through unchanged."""
+        text = 'No quotes here at all'
+        assert normalize_quotes(text) == text
 
 
 class TestValidateInputData:

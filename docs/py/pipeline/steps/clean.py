@@ -18,7 +18,7 @@ from pathlib import Path
 import pandas as pd
 
 
-from lib.cleaners import clean_data
+from lib.cleaners import clean_data, normalize_quotes
 from lib.config_dynamic import get_config
 from lib.exceptions import ProcessingError, InsufficientDataError
 from ..base import PipelineStep, PipelineContext
@@ -65,13 +65,18 @@ class CleaningStep(PipelineStep):
         quality_tracker = context.quality_tracker
         initial_row_count = context.get('initial_row_count', len(df_raw))
 
-        # Track ignored columns
+        # Track ignored columns (using normalized quote matching)
         config = get_config()
-        mapped_sources = set(config.COLUMN_MAPPING.keys())
+        # Normalize config keys for comparison (handles curly vs straight quotes)
+        normalized_mapped = {normalize_quotes(k) for k in config.COLUMN_MAPPING.keys()}
         # Add system columns that might be present but are handled separately
         system_cols = {'Which newscast are you auditing?', 'Date of newscast:', 'Start time', 'ID', 'Name', 'Email'}
-        
-        ignored_cols = [col for col in df_raw.columns if col not in mapped_sources and not any(s in str(col) for s in system_cols)]
+
+        ignored_cols = [
+            col for col in df_raw.columns
+            if normalize_quotes(col) not in normalized_mapped
+            and not any(s in str(col) for s in system_cols)
+        ]
         if ignored_cols:
             quality_tracker.add_info(
                 f"Ignored {len(ignored_cols)} unexpected columns in spreadsheet",

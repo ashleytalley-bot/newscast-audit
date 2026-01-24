@@ -24,6 +24,37 @@ from .exceptions import (
 from .datetime_utils import parse_date_column
 
 
+# Unicode quote normalization mapping
+# Maps curly/smart quotes to their ASCII equivalents
+QUOTE_NORMALIZATION = {
+    '\u201c': '"',  # " left double quotation mark
+    '\u201d': '"',  # " right double quotation mark
+    '\u2018': "'",  # ' left single quotation mark
+    '\u2019': "'",  # ' right single quotation mark
+    '\u2032': "'",  # ′ prime (sometimes used as apostrophe)
+    '\u2033': '"',  # ″ double prime
+}
+
+
+def normalize_quotes(text: str) -> str:
+    """
+    Normalize curly/smart quotes to ASCII equivalents.
+
+    MS Forms and other Microsoft products often use typographic quotes
+    (U+201C, U+201D, U+2018, U+2019) instead of ASCII quotes. This causes
+    exact string matching to fail even when text looks identical.
+
+    Args:
+        text: String that may contain curly quotes
+
+    Returns:
+        String with all curly quotes replaced by ASCII equivalents
+    """
+    for curly, straight in QUOTE_NORMALIZATION.items():
+        text = text.replace(curly, straight)
+    return text
+
+
 def validate_input_data(df: pd.DataFrame) -> None:
     """
     Validate that the Excel file has expected columns and data.
@@ -153,13 +184,27 @@ def convert_to_numeric(v):
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
     """
     Rename source columns to snake_case names using COLUMN_MAPPING.
+
+    Uses quote-normalized matching to handle MS Forms curly quotes.
+    Both the Excel column headers and config keys are normalized before
+    comparison, so "you" matches "you" regardless of quote style.
     """
     config = get_config()
-    rename_map = {
-        source: target
+
+    # Normalize both sides for matching
+    # Create lookup: normalized_source -> (original_source, target)
+    normalized_config = {
+        normalize_quotes(source): (source, target)
         for source, target in config.COLUMN_MAPPING.items()
-        if source in df.columns
     }
+
+    rename_map = {}
+    for col in df.columns:
+        normalized_col = normalize_quotes(col)
+        if normalized_col in normalized_config:
+            _, target = normalized_config[normalized_col]
+            rename_map[col] = target
+
     return df.rename(columns=rename_map)
 
 
